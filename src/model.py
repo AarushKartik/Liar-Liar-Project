@@ -69,21 +69,5 @@ class RNNClassifier:
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
-# Example usage
-if __name__ == "__main__":
-    # Generate some sample data
-    num_samples = 1000
-    num_time_steps = 10
-    num_features = 1
-    num_classes = 6
 
-    X = np.random.rand(num_samples, num_time_steps, num_features)
-    y = np.random.randint(num_classes, size=num_samples)
-    y = np.eye(num_classes)[y]  # One-hot encoding of labels
 
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
-
-    classifier = RNNClassifier(num_classes=num_classes)
-    classifier.fit(X_train, y_train, X_val, y_val)
-    classifier.evaluate(X_val, y_val)
-# Liar-Liar-Project
