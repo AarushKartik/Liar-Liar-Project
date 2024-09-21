@@ -3,6 +3,8 @@ import numpy as np
 import gc
 from tqdm import tqdm
 import spacy
+from sklearn.feature_extraction.text import CountVectorizer
+from tensorflow.keras.utils import to_categorical
 
 # Define truthiness ranking
 truthiness_rank = {
@@ -42,80 +44,50 @@ def encode_labels(df, truthiness_rank):
     return df
 
 # Prepare training and test data
-def prepare_data(df_train, df_test):
-    X_train = df_train['Statement']
-    y_train = df_train['Label_Rank']
-    X_test = df_test['Statement']
-    y_test = df_test['Label_Rank']
-    
-    return X_train, y_train, X_test, y_test
+def prepare_data(df_train, df_test, df_valid):
+    vectorizer = CountVectorizer()
 
-# Combine training and testing data for processing
-def consolidate_data(X_train, X_test, y_train, y_test):
-    X_text = pd.concat([X_train, X_test]).tolist()
-    y = pd.concat([y_train, y_test]).tolist()
-    return X_text, y
+    # Vectorize statements
+    X_train_vec = vectorizer.fit_transform(df_train['Statement'])
+    X_test_vec = vectorizer.transform(df_test['Statement'])
+    X_valid_vec = vectorizer.transform(df_valid['Statement'])
 
-# Get the maximum length of tokens in the dataset
-def get_global_max_length(X_text):
-    max_length = 0
-    for doc in text_to_nlp.pipe(X_text):
-        max_length = max(max_length, len(doc))
-    return max_length
+    # Reshape for LSTM (batch_size, timesteps, features)
+    X_train_reshaped = X_train_vec.toarray().reshape(X_train_vec.shape[0], 1, X_train_vec.shape[1])
+    X_test_reshaped = X_test_vec.toarray().reshape(X_test_vec.shape[0], 1, X_test_vec.shape[1])
+    X_valid_reshaped = X_valid_vec.toarray().reshape(X_valid_vec.shape[0], 1, X_valid_vec.shape[1])
 
-# Standardize embeddings to a global length
-def standardize_length_global(embeddings, max_length):
-    embedding_dim = len(embeddings[0][0]) if embeddings[0] else 0
-    padded_embeddings = [[np.zeros(embedding_dim)] * (max_length - len(tokens)) + tokens for tokens in embeddings]
-    return padded_embeddings
+    # One-hot encode labels
+    y_train_one_hot = to_categorical(df_train['Label_Rank'], num_classes=6)
+    y_test_one_hot = to_categorical(df_test['Label_Rank'], num_classes=6)
+    y_valid_one_hot = to_categorical(df_valid['Label_Rank'], num_classes=6)
 
-# Tokenize and embed text in batches
-def tokenize_and_embed_batch(text_batch):
-    docs = list(text_to_nlp.pipe(text_batch))
-    embeddings = [[token.vector for token in doc] for doc in docs]
-    return embeddings
-
-# Process text in batches to avoid running out of memory
-def batch_process(X_text, batch_size=100):
-    max_length = get_global_max_length(X_text)  
-    embedding_dim = len(text_to_nlp(X_text[0])[0].vector)  
-
-    X_mmap = np.memmap('embeddings.dat', dtype='float32', mode='w+', shape=(len(X_text), max_length, embedding_dim))
-
-    for i in tqdm(range(0, len(X_text), batch_size)):
-        text_batch = X_text[i:i + batch_size]
-        embeddings = tokenize_and_embed_batch(text_batch)
-        padded_embeddings = standardize_length_global(embeddings, max_length)
-        X_batch = np.array(padded_embeddings)
-        X_mmap[i:i + batch_size] = X_batch
-
-        del embeddings, X_batch  
-        gc.collect()  
-
-    return X_mmap
+    return X_train_reshaped, y_train_one_hot, X_test_reshaped, y_test_one_hot, X_valid_reshaped, y_valid_one_hot
 
 # Main function to execute the full process
 def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
+    # Load and preprocess data
+    print("Loading TSV files...")
     df_train, df_test, df_valid = load_tsv_files(train_file, test_file, valid_file)
     
+    print("Renaming columns...")
     df_train = rename_columns(df_train)
     df_test = rename_columns(df_test)
     df_valid = rename_columns(df_valid)
     
+    print("Computing statement lengths...")
     df_train = compute_statement_length(df_train)
     df_test = compute_statement_length(df_test)
     df_valid = compute_statement_length(df_valid)
 
+    print("Encoding labels...")
     df_train = encode_labels(df_train, truthiness_rank)
     df_test = encode_labels(df_test, truthiness_rank)
+    df_valid = encode_labels(df_valid, truthiness_rank)
     
-    X_train, y_train, X_test, y_test = prepare_data(df_train, df_test)
-    
-    # X_text, y = consolidate_data(X_train, X_test, df_train['Label_Rank'], df_test['Label_Rank'])
-    
-    # X_processed = batch_process(X_text, batch_size=batch_size)
-    
-    # print(f"The shape of the processed dataset is: {X_processed.shape}")
-    
-    return X_train, y_train, X_test, y_test
+    print("Preparing data for model input...")
+    X_train, y_train, X_test, y_test, X_valid, y_valid = prepare_data(df_train, df_test, df_valid)
 
+    print("Data preparation complete.")
+    
+    return X_train, y_train, X_test, y_test, X_valid, y_valid
