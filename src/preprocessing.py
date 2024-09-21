@@ -95,7 +95,7 @@ def batch_process(X_text, batch_size=100):
     return X_mmap
 
 # Main function to execute the full process
-def process_data_pipeline(train_file, test_file, valid_file, truthiness_rank, batch_size=100):
+def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
     df_train, df_test, df_valid = load_tsv_files(train_file, test_file, valid_file)
     
     df_train = rename_columns(df_train)
