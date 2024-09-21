@@ -101,13 +101,13 @@ def process_data_pipeline(train_file, test_file, valid_file, truthiness_rank, ba
     
     X_train, y_train, X_test, y_test = prepare_data(df_train, df_test)
     
-    X_text, y = consolidate_data(X_train, X_test, df_train['Label_Rank'], df_test['Label_Rank'])
+    # X_text, y = consolidate_data(X_train, X_test, df_train['Label_Rank'], df_test['Label_Rank'])
     
-    X_processed = batch_process(X_text, batch_size=batch_size)
+    # X_processed = batch_process(X_text, batch_size=batch_size)
     
-    print(f"The shape of the processed dataset is: {X_processed.shape}")
+    # print(f"The shape of the processed dataset is: {X_processed.shape}")
     
-    return X_processed, y
+    return X_train, y_train, X_test, y_test
 
 # Define truthiness ranking
 truthiness_rank = {
