@@ -90,4 +90,4 @@ def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
 
     print("Data preparation complete.")
     
-    return X_train, y_train, X_test, y_test, X_valid, y_valid
+    return X_train, y_train, X_test, y_test#, X_valid, y_valid
