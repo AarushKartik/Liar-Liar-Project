@@ -1,7 +1,12 @@
-
+from src.download_data import download
 
 def main():
-  pass
+  
+
+  # Downloads the Liar Dataset
+  download()
+
+
 
 if __name__ == '__main__':
   main()
