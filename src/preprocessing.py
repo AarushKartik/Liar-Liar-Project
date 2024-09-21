@@ -34,9 +34,9 @@ def encode_labels(df, truthiness_rank):
 # Prepare training and test data
 def prepare_data(df_train, df_test):
     X_train = df_train['Statement']
-    y_train = df_train['Label']
+    y_train = df_train['Label_Rank']
     X_test = df_test['Statement']
-    y_test = df_test['Label']
+    y_test = df_test['Label_Rank']
     
     return X_train, y_train, X_test, y_test
 
