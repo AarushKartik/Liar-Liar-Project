@@ -20,7 +20,7 @@ def unzip_file(filename, extract_to='.'):
     with zipfile.ZipFile(filename, 'r') as zip_ref:
         zip_ref.extractall(extract_to)
 
-def main():
+def download():
     # Check if the dataset file already exists
     if not os.path.exists(dataset_file):
         print(f"Downloading {dataset_file}...")
