@@ -32,5 +32,5 @@ def main():
         print(f"{dataset_file} already exists. Skipping download.")
 
 if __name__ == "__main__":
-    main()
+    download()
 # Liar-Liar-Project
