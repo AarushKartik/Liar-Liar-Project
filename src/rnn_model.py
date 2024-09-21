@@ -1,10 +1,10 @@
-import numpy as np
+# src/rnn_model.py
+
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-from sklearn.model_selection import train_test_split
 
 class RNNClassifier:
     def __init__(self, num_classes=6, num_epochs=30, lstm_units=50, dropout_rate=0.7):
@@ -16,7 +16,7 @@ class RNNClassifier:
 
     def build_model(self):
         model = Sequential()
-        model.add(LSTM(self.lstm_units, return_sequences=True, input_shape=(None, 1)))  # input_shape added
+        model.add(LSTM(self.lstm_units, return_sequences=True))
         model.add(Dropout(self.dropout_rate))
         model.add(LSTM(self.lstm_units))
         model.add(Dropout(self.dropout_rate))
@@ -26,10 +26,6 @@ class RNNClassifier:
         return model
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
-        if X_train is None or y_train is None:
-            print("Arguments are none. Retry with correct arguments.")
-            return None
-
         callbacks = kwargs.pop('callbacks', [])
         if X_val is not None and y_val is not None:
             early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
@@ -68,6 +64,3 @@ class RNNClassifier:
             return getattr(self.model, name)
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
-
-
