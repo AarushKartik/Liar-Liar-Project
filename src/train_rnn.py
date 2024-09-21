@@ -5,7 +5,6 @@ import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
-from rnn_model import RNNClassifier
 import matplotlib.pyplot as plt
 
 def plot_training_history(history):
