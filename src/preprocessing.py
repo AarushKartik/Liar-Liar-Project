@@ -4,6 +4,16 @@ import gc
 from tqdm import tqdm
 import spacy
 
+# Define truthiness ranking
+truthiness_rank = {
+    'true': 0,
+    'mostly-true': 1,
+    'half-true': 2,
+    'barely-true': 3,
+    'false': 4,
+    'pants-fire': 5
+}
+
 # Load Spacy Model
 text_to_nlp = spacy.load("en_core_web_md")
 
@@ -109,15 +119,3 @@ def process_data_pipeline(train_file, test_file, valid_file, truthiness_rank, ba
     
     return X_train, y_train, X_test, y_test
 
-# Define truthiness ranking
-truthiness_rank = {
-    'true': 0,
-    'mostly-true': 1,
-    'half-true': 2,
-    'barely-true': 3,
-    'false': 4,
-    'pants-fire': 5
-}
-
-# Example usage
-X_processed, y_processed = process_data_pipeline('train.tsv', 'test.tsv', 'valid.tsv', truthiness_rank)
