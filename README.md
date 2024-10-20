@@ -13,8 +13,9 @@ This project provides a comprehensive analysis of the Liar-Liar dataset, focusin
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
   - [Usage](#usage)
-    - [data_processing.py](#main_droid_fullpy)
-    - [model_training.py](#main_images_fullpy)
+    - [data_processing.py](#data_processing_py)
+    - [model_training.py](#model_training_py)
+  - [Paper and Presentation Preview](#paper-and-presentation-preview)
 
 ## Getting Started
 
@@ -30,7 +31,6 @@ Clone the repository:
 ```bash
 git clone https://${GIT_USERNAME}:${GIT_PAT}@github.com/AarushKartik/Liar-Liar-Project.git
 cd Liar-Liar-Project
-
 ```
 
 ## Usage
@@ -45,11 +45,29 @@ cd Liar-Liar-Project
 
 ### model_training.py
 
-`main_images.py` is responsible for image processing tasks such as feature extraction, image matching, and other computer vision techniques. This script can be used independently or as part of the larger SLAM system.
+`model_training.py` is responsible for training machine learning models on the Liar-Liar dataset to classify political statements based on truthfulness. This script can be used for model training and evaluation.
 
-- **Feature Extraction**: Detects and describes keypoints in the images.
-- **Image Matching**: Matches features between images to find correspondences.
-- **Visualization**: Provides tools for visualizing the processed images and matches.
+- **Model Training**: Trains a Long Short-Term Memory (LSTM) model for fake news detection.
+- **Evaluation**: Provides accuracy, precision, recall, and F1-score metrics.
+- **Visualization**: Displays model performance through confusion matrices and classification reports.
+
+## Paper and Presentation Preview
+
+### Paper Preview
+
+You can view a preview of the paper for this project by clicking the link below:
+
+[![PDF Paper Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/paper_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/Aarush_Liar_Liar_Paper.pdf)
+
+This link will open the PDF paper directly in your browser.
+
+### Presentation Preview
+
+You can view a preview of the presentation for this project by clicking the link below:
+
+[![PDF Presentation Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/presentation_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/Aarush_Liar_Liar_Presentation.pdf)
+
+This link will open the PDF presentation directly in your browser.
 
 ## Scripts and Modules
 
@@ -59,5 +77,3 @@ The `droid_slam` module contains the core components of the SLAM system, includi
 - `droid_net.py`: Defines the neural network architecture used for feature extraction and matching.
 - `factor_graph.py`: Implements the factor graph used for pose estimation and optimization.
 - `data_readers`: Contains utilities for reading and preprocessing various types of input data (e.g., RGB-D images, IMU data).
-
-
