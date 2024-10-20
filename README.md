@@ -3,7 +3,7 @@
 
 ## Overview
 
-This project provides a deep analysis of the Liar-Liar Dataset along with the study of individual impactful components within the dataset. The repository contains various scripts and modules designed for preprocessing and allowing the user to run through all necessary steps that have been performed. This README provides a comprehensive guide to understanding the functionality and usage of the main components in the repository, specifically focusing on `blank.py` and `blank.py`.
+This project provides a comprehensive analysis of the Liar-Liar dataset, focusing on identifying misinformation in political discourse. The repository includes scripts and modules for preprocessing the dataset and executing various analytical tasks. This README serves as a guide to understanding the functionalities of the key components in the repository, specifically highlighting data_processing.py and model_training.py.
 
 ## Table of Contents
 - [Project Name](#project-name)
@@ -13,11 +13,11 @@ This project provides a deep analysis of the Liar-Liar Dataset along with the st
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
   - [Usage](#usage)
-    - [main_droid_full.py](#main_droid_fullpy)
-    - [main_images_full.py](#main_images_fullpy)
+    - [data_processing.py](#main_droid_fullpy)
+    - [model_training.py](#main_images_fullpy)
   - [Scripts and Modules](#scripts-and-modules)
-    - [droid_slam](#droid_slam)
-    - [image_processing](#image_processing)
+    - [data_analysis](#droid_slam)
+    - [model](#image_processing)
 
 ## Getting Started
 
@@ -32,21 +32,21 @@ Ensure you have the following prerequisites installed:
 Clone the repository:
 ```bash
 git clone https://${GIT_USERNAME}:${GIT_PAT}@github.com/AarushKartik/Liar-Liar-Project.git
-cd (?)
+cd Liar-Liar-Project
+
 ```
 
 ## Usage
 
-### main_droid.py
+### data_processing.py
 
-`main_droid.py` is the primary script for running the full SLAM system. This script handles the initialization, processing, and optimization steps required for visual SLAM. Below is an overview of its key components:
+'data_processing.py' is the primary script for preparing the Liar-Liar dataset for analysis. It handles data cleaning, preprocessing, and feature extraction. Key components include:
 
-- **Initialization**: Sets up the necessary parameters and data structures.
-- **Data Loading**: Reads input data and preprocesses it.
-- **SLAM Processing**: Executes the SLAM pipeline, including feature extraction, matching, and pose estimation.
-- **Optimization**: Performs bundle adjustment and other optimization techniques to refine the SLAM results.
+- **Data Cleaning**: Removes duplicates and irrelevant information to ensure data quality.
+- **Data Loading**: Reads the Liar-Liar dataset and formats it for analysis.
+- **Feature Extraction**: Generates features such as sentiment scores and readability metrics to enhance model training.
 
-### main_images.py
+### model_training.py
 
 `main_images.py` is responsible for image processing tasks such as feature extraction, image matching, and other computer vision techniques. This script can be used independently or as part of the larger SLAM system.
 
