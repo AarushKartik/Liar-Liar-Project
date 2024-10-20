@@ -1,9 +1,9 @@
 
-# Site Walk
+# Liar-Liar Project
 
 ## Overview
 
-This project provides an implementation of a visual SLAM system and image processing pipelines. The repository contains various scripts and modules designed for simultaneous localization and mapping (SLAM) and image analysis tasks. This README provides a comprehensive guide to understanding the functionality and usage of the main components in the repository, specifically focusing on `main_droid_full.py` and `main_images_full.py`.
+This project provides a deep analysis of the Liar-Liar Dataset along with the study of individual impactful components within the dataset. The repository contains various scripts and modules designed for preprocessing and allowing the user to run through all necessary steps that have been performed. This README provides a comprehensive guide to understanding the functionality and usage of the main components in the repository, specifically focusing on `blank.py` and `blank.py`.
 
 ## Table of Contents
 - [Project Name](#project-name)
@@ -31,8 +31,8 @@ Ensure you have the following prerequisites installed:
 
 Clone the repository:
 ```bash
-git clone https://${GIT_USERNAME}:${GIT_PAT}@github.com/nexterarobotics/sitewalk.git
-cd sitewalk
+git clone https://${GIT_USERNAME}:${GIT_PAT}@github.com/AarushKartik/Liar-Liar-Project.git
+cd (?)
 ```
 
 ## Usage
