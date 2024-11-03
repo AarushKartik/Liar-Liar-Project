@@ -69,11 +69,3 @@ You can view a preview of the presentation for this project by clicking the link
 
 This link will open the PDF presentation directly in your browser.
 
-## Scripts and Modules
-
-### droid_slam
-
-The `droid_slam` module contains the core components of the SLAM system, including:
-- `droid_net.py`: Defines the neural network architecture used for feature extraction and matching.
-- `factor_graph.py`: Implements the factor graph used for pose estimation and optimization.
-- `data_readers`: Contains utilities for reading and preprocessing various types of input data (e.g., RGB-D images, IMU data).
