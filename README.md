@@ -33,6 +33,16 @@ git clone https://${GIT_USERNAME}:${GIT_PAT}@github.com/AarushKartik/Liar-Liar-P
 cd Liar-Liar-Project
 ```
 
+### LightGBM Installation
+
+Building LightGBM: 
+```bash
+git clone --recursive https://github.com/microsoft/LightGBM
+cd LightGBM
+cmake -B build -S .
+cmake --build build -j4
+```
+
 ## Usage
 
 ### data_processing.py
