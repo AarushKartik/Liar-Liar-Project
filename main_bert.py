@@ -2,7 +2,7 @@ from src.download_data import download
 
 # BERT
 from src.preprocessing_bert import process_data_pipeline_bert
-from src.bert_model import BERT
+from src.bert_model import BERTClassifier
 from src.train_bert import train_bert
 
 def bert():
@@ -20,12 +20,12 @@ def bert():
 
     # Stage 3: Gather the model
     print("Step 3: Building the BERT model...")
-    model = BERT(num_epochs=5, lstm_units=200, dropout_rate=0.2)
+    classifier = BERTClassifier(num_classes=6, num_epochs=3)  # BERT-based now
     print("Model built successfully.\n")
 
     # Stage 4: Train the model
     print("Step 4: Training the model...")
-    train_bert(model, X_train, X_test, y_train, y_test)
+    classifier.fit(X_train, y_train, X_val, y_val)
     print("Model training complete.\n")
 
 if __name__ == '__main__':
