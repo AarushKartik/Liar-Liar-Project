@@ -3,8 +3,9 @@ import numpy as np
 import gc
 from tqdm import tqdm
 import spacy
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer  # No longer used, but left for structural consistency
 from tensorflow.keras.utils import to_categorical
+from transformers import BertTokenizer
 
 # Define truthiness ranking
 truthiness_rank = {
@@ -17,7 +18,7 @@ truthiness_rank = {
 }
 
 # Load Spacy Model
-text_to_nlp = spacy.load("en_core_web_md")
+text_to_nlp = spacy.load("en_core_web_md")  # Not strictly necessary for BERT, but kept to preserve structure
 
 # Load TSV files and return processed dataframes
 def load_tsv_files(train_file, test_file, valid_file):
@@ -29,7 +30,16 @@ def load_tsv_files(train_file, test_file, valid_file):
 
 # Rename columns for consistency
 def rename_columns(df):
-    columns_mapping = {0: 'ID', 1: 'Label', 2: 'Statement', 3: 'Subject', 4: 'Speaker', 5: 'Job Title', 6: 'State Info', 7: 'Party Affiliation'}
+    columns_mapping = {
+        0: 'ID', 
+        1: 'Label', 
+        2: 'Statement', 
+        3: 'Subject', 
+        4: 'Speaker', 
+        5: 'Job Title', 
+        6: 'State Info', 
+        7: 'Party Affiliation'
+    }
     df.rename(columns=columns_mapping, inplace=True)
     return df
 
@@ -43,26 +53,64 @@ def encode_labels(df, truthiness_rank):
     df['Label_Rank'] = df['Label'].map(truthiness_rank)
     return df
 
-# Prepare training and test data
-def prepare_data(df_train, df_test, df_valid):
-    vectorizer = CountVectorizer()
+# Prepare data for BERT model
+def prepare_data(df_train, df_test, df_valid, max_length=128):
+    """
+    Instead of using CountVectorizer (as done for RNN/LSTM),
+    we will use BertTokenizer to convert text into input_ids,
+    attention_masks, etc.
+    """
 
-    # Vectorize statements
-    X_train_vec = vectorizer.fit_transform(df_train['Statement'])
-    X_test_vec = vectorizer.transform(df_test['Statement'])
-    X_valid_vec = vectorizer.transform(df_valid['Statement'])
+    # Load a BERT tokenizer (you can choose another model if you prefer)
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-    # Reshape for LSTM (batch_size, timesteps, features)
-    X_train_reshaped = X_train_vec.toarray().reshape(X_train_vec.shape[0], 1, X_train_vec.shape[1])
-    X_test_reshaped = X_test_vec.toarray().reshape(X_test_vec.shape[0], 1, X_test_vec.shape[1])
-    X_valid_reshaped = X_valid_vec.toarray().reshape(X_valid_vec.shape[0], 1, X_valid_vec.shape[1])
+    # Tokenize the statements
+    train_encodings = tokenizer(
+        list(df_train['Statement']),
+        truncation=True,
+        padding='max_length',
+        max_length=max_length
+    )
+    test_encodings = tokenizer(
+        list(df_test['Statement']),
+        truncation=True,
+        padding='max_length',
+        max_length=max_length
+    )
+    valid_encodings = tokenizer(
+        list(df_valid['Statement']),
+        truncation=True,
+        padding='max_length',
+        max_length=max_length
+    )
 
-    # One-hot encode labels
+    # Convert to numpy arrays (or keep them as lists if your framework accepts lists)
+    X_train_input_ids = np.array(train_encodings['input_ids'])
+    X_train_attention_mask = np.array(train_encodings['attention_mask'])
+    
+    X_test_input_ids = np.array(test_encodings['input_ids'])
+    X_test_attention_mask = np.array(test_encodings['attention_mask'])
+
+    X_valid_input_ids = np.array(valid_encodings['input_ids'])
+    X_valid_attention_mask = np.array(valid_encodings['attention_mask'])
+
+    # If you also want token_type_ids (for next sentence tasks or specific BERT variants)
+    # X_train_token_type_ids = np.array(train_encodings['token_type_ids'])
+    # X_test_token_type_ids = np.array(test_encodings['token_type_ids'])
+    # X_valid_token_type_ids = np.array(valid_encodings['token_type_ids'])
+
+    # Convert labels to one-hot if you want a one-hot vector for your classification layer
     y_train_one_hot = to_categorical(df_train['Label_Rank'], num_classes=6)
     y_test_one_hot = to_categorical(df_test['Label_Rank'], num_classes=6)
     y_valid_one_hot = to_categorical(df_valid['Label_Rank'], num_classes=6)
 
-    return X_train_reshaped, y_train_one_hot, X_test_reshaped, y_test_one_hot, X_valid_reshaped, y_valid_one_hot
+    # Return BERT-specific inputs (input_ids, attention_mask, labels).
+    # You can bundle them as needed; below is just one example.
+    return (
+        (X_train_input_ids, X_train_attention_mask), y_train_one_hot,
+        (X_test_input_ids, X_test_attention_mask), y_test_one_hot,
+        (X_valid_input_ids, X_valid_attention_mask), y_valid_one_hot
+    )
 
 # Main function to execute the full process
 def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
@@ -85,9 +133,9 @@ def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
     df_test = encode_labels(df_test, truthiness_rank)
     df_valid = encode_labels(df_valid, truthiness_rank)
     
-    print("Preparing data for model input...")
+    print("Preparing data for model input (BERT)...")
     X_train, y_train, X_test, y_test, X_valid, y_valid = prepare_data(df_train, df_test, df_valid)
 
     print("Data preparation complete.")
     
-    return X_train, y_train, X_test, y_test#, X_valid, y_valid
+    return X_train, y_train, X_test, y_test, X_valid, y_valid
