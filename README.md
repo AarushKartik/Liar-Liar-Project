@@ -67,7 +67,7 @@ cmake --build build -j4
 
 You can view a preview of the paper for this project by clicking the link below:
 
-[![PDF Paper Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/paper_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/Aarush_Liar_Liar_Paper.pdf)
+[![PDF Paper Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/paper_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/assets/Aarush_Liar_Liar_Paper.pdf)
 
 This link will open the PDF paper directly in your browser.
 
@@ -75,7 +75,7 @@ This link will open the PDF paper directly in your browser.
 
 You can view a preview of the presentation for this project by clicking the link below:
 
-[![PDF Presentation Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/presentation_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/Aarush_Liar_Liar_Presentation.pdf)
+[![PDF Presentation Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/presentation_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/assets/Aarush_Liar_Liar_Presentation.pdf)
 
 This link will open the PDF presentation directly in your browser.
 
