@@ -3,7 +3,6 @@ from src.download_data import download
 # BERT
 from src.preprocessing_bert import process_data_pipeline_bert
 from src.bert_model import BERTClassifier
-from src.train_bert import train_bert
 
 def bert():
     print("Starting the pipeline...")
