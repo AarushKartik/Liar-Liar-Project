@@ -28,6 +28,10 @@ def bert():
     classifier.fit(X_train, y_train, X_val, y_val)
     print("Model training complete.\n")
 
+    # Stage 5: Evaluate the model
+    classifier.evaluate(X_test, y_test)
+    acc = classifier.score(X_test, y_test)
+
 if __name__ == '__main__':
     
     bert()
