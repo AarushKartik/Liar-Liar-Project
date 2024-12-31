@@ -81,7 +81,7 @@ def prepare_data(df_train, df_test, df_valid, max_length=128):
     )
 
 # Main function to execute the full process
-def process_data_pipeline(train_file, test_file, valid_file, max_length=128):
+def process_data_pipeline_bert(train_file, test_file, valid_file, max_length=128):
     """
     Executes the full preprocessing pipeline for BERT classification.
     """
