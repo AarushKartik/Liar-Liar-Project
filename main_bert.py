@@ -32,6 +32,9 @@ def bert():
     classifier.evaluate(X_test, y_test)
     acc = classifier.score(X_test, y_test)
 
+    # Stage 6: Save the model
+    classifier.save_model()
+    
 if __name__ == '__main__':
     
     bert()
