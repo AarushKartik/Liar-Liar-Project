@@ -5,26 +5,30 @@ from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from transformers import TFBertForSequenceClassification, BertConfig
 import tensorflow as tf
+import os
 
-class BERTClassifier:  # We keep the same class name for structural consistency
+class RNNClassifier:  # Kept the same class name for structural consistency
     def __init__(self, 
                  num_classes=6, 
                  num_epochs=3, 
                  dropout_rate=0.1, 
-                 learning_rate=2e-5):
+                 learning_rate=2e-5,
+                 model_save_dir='weights/bert'):
         """
         num_classes: Number of classification labels
         num_epochs: How many epochs to train
-        dropout_rate: Not used directly in TFBertForSequenceClassification 
+        dropout_rate: Not used directly by TFBertForSequenceClassification 
                       (BERT has its own dropout), but kept for structural consistency
         learning_rate: Learning rate for the Adam optimizer
+        model_save_dir: Directory to save the trained BERT model weights
         """
         self.num_classes = num_classes
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
+        self.model_save_dir = model_save_dir
 
-        # Instead of building a Sequential LSTM model, build a BERT model
+        # Build the BERT-based classification model
         self.model = self.build_model()
 
     def build_model(self):
@@ -38,24 +42,25 @@ class BERTClassifier:  # We keep the same class name for structural consistency
 
         # Set up the optimizer and compile
         optimizer = Adam(learning_rate=self.learning_rate)
-        # Use 'categorical_crossentropy' if you are training with one-hot labels
-        model.compile(optimizer=optimizer, 
-                      loss='categorical_crossentropy', 
-                      metrics=['accuracy'])
+        model.compile(
+            optimizer=optimizer, 
+            loss='categorical_crossentropy',  # Use for one-hot labels
+            metrics=['accuracy']
+        )
         return model
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
         """
         Trains the BERT classifier. 
         
-        X_train, y_train: Typically,
+        X_train, y_train: 
             X_train -> a dict or tuple containing (input_ids, attention_mask) 
             y_train -> one-hot or integer labels (depending on your setup)
 
         X_val, y_val: Same format for validation set (optional).
         """
         callbacks = kwargs.pop('callbacks', [])
-        # Early stopping, similar to the RNN script
+        # Early stopping, similar to your original RNN script
         if X_val is not None and y_val is not None:
             early_stopping = EarlyStopping(
                 monitor='val_loss', 
@@ -63,18 +68,18 @@ class BERTClassifier:  # We keep the same class name for structural consistency
                 restore_best_weights=True
             )
             callbacks.append(early_stopping)
-            return self.model.fit(
+            history = self.model.fit(
                 X_train,
                 y_train,
                 epochs=self.num_epochs,
                 validation_data=(X_val, y_val),
                 callbacks=callbacks,
-                batch_size=8,  # Typically smaller batch size for BERT
+                batch_size=8,  # Commonly smaller for BERT
                 verbose=1,
                 **kwargs
             )
         else:
-            return self.model.fit(
+            history = self.model.fit(
                 X_train,
                 y_train,
                 epochs=self.num_epochs,
@@ -83,6 +88,8 @@ class BERTClassifier:  # We keep the same class name for structural consistency
                 callbacks=callbacks,
                 **kwargs
             )
+        
+        return history
 
     def predict(self, X, **kwargs):
         """
@@ -92,7 +99,7 @@ class BERTClassifier:  # We keep the same class name for structural consistency
         # TFBertForSequenceClassification returns a model output object
         outputs = self.model.predict(X, **kwargs)
         logits = outputs.logits  # shape: (batch_size, num_classes)
-        return logits.argmax(axis=-1)  # Return the predicted class indices
+        return logits.argmax(axis=-1)  # Return predicted class indices
 
     def predict_proba(self, X, **kwargs):
         """
@@ -100,16 +107,15 @@ class BERTClassifier:  # We keep the same class name for structural consistency
         """
         outputs = self.model.predict(X, **kwargs)
         logits = outputs.logits
-        # Convert logits to probabilities via softmax
-        probabilities = tf.nn.softmax(logits, axis=-1).numpy()
+        probabilities = tf.nn.softmax(logits, axis=-1).numpy()  # Convert logits to probabilities
         return probabilities
 
     def score(self, X, y):
         """
         Computes the accuracy score, assuming y is one-hot or integer indices.
         """
-        # If y is one-hot, convert to class indices:
         if len(y.shape) > 1 and y.shape[1] > 1:
+            # Convert one-hot to class indices
             y_true = y.argmax(axis=-1)
         else:
             y_true = y
@@ -120,7 +126,6 @@ class BERTClassifier:  # We keep the same class name for structural consistency
         """
         Prints and returns accuracy, confusion matrix, and classification report.
         """
-        # Convert y to class indices if it is one-hot
         if len(y.shape) > 1 and y.shape[1] > 1:
             y_true = y.argmax(axis=-1)
         else:
@@ -138,6 +143,19 @@ class BERTClassifier:  # We keep the same class name for structural consistency
         print(classification_rep)
 
         return accuracy, confusion, classification_rep
+
+    def save_model(self, save_dir=None):
+        """
+        Saves the trained model weights to the specified directory (default: weights/bert).
+        """
+        if save_dir is None:
+            save_dir = self.model_save_dir
+        
+        # Create the directory if it doesn't exist
+        os.makedirs(save_dir, exist_ok=True)
+        # Save the entire model (config + weights) in Transformers format
+        self.model.save_pretrained(save_dir)
+        print(f"Model saved to {save_dir}")
 
     def __getattr__(self, name):
         """
