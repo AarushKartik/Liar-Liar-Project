@@ -72,12 +72,7 @@ def roberta():
     train(rnn, X_train, X_test, y_train, y_test)
     print("Model training complete.\n")
 
-def separate_data():
-    pass
-
 if __name__ == '__main__':
-
-    separate_data()
     
     bert()
     bilstm()
