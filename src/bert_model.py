@@ -7,7 +7,7 @@ from transformers import TFBertForSequenceClassification, BertConfig
 import tensorflow as tf
 import os
 
-class RNNClassifier:  # Kept the same class name for structural consistency
+class BERTClassifier:  # Kept the same class name for structural consistency
     def __init__(self, 
                  num_classes=6, 
                  num_epochs=3, 
