@@ -3,8 +3,8 @@ import numpy as np
 import gc
 from tqdm import tqdm
 import spacy
-from sklearn.feature_extraction.text import CountVectorizer
-from tensorflow.keras.utils import to_categorical
+from transformers import RobertaTokenizer
+from sklearn.preprocessing import LabelEncoder
 
 # Define truthiness ranking
 truthiness_rank = {
@@ -16,7 +16,7 @@ truthiness_rank = {
     'pants-fire': 5
 }
 
-# Load Spacy Model
+# Load Spacy Model (not used for RoBERTa, so optional)
 text_to_nlp = spacy.load("en_core_web_md")
 
 # Load TSV files and return processed dataframes
@@ -43,29 +43,33 @@ def encode_labels(df, truthiness_rank):
     df['Label_Rank'] = df['Label'].map(truthiness_rank)
     return df
 
-# Prepare training and test data
-def prepare_data(df_train, df_test, df_valid):
-    vectorizer = CountVectorizer()
+# Prepare training and test data for RoBERTa
+def prepare_data_for_roberta(df_train, df_test, df_valid, tokenizer, max_length=256):
+    # Tokenize the statements using RoBERTa tokenizer
+    def tokenize_statements(df):
+        return tokenizer(
+            df['Statement'].tolist(), 
+            padding=True, 
+            truncation=True, 
+            max_length=max_length, 
+            return_tensors='pt'
+        )
+    
+    # Tokenize the datasets
+    train_encodings = tokenize_statements(df_train)
+    test_encodings = tokenize_statements(df_test)
+    valid_encodings = tokenize_statements(df_valid)
 
-    # Vectorize statements
-    X_train_vec = vectorizer.fit_transform(df_train['Statement'])
-    X_test_vec = vectorizer.transform(df_test['Statement'])
-    X_valid_vec = vectorizer.transform(df_valid['Statement'])
+    # Encode labels
+    label_encoder = LabelEncoder()
+    y_train = label_encoder.fit_transform(df_train['Label_Rank'])
+    y_test = label_encoder.transform(df_test['Label_Rank'])
+    y_valid = label_encoder.transform(df_valid['Label_Rank'])
 
-    # Reshape for LSTM (batch_size, timesteps, features)
-    X_train_reshaped = X_train_vec.toarray().reshape(X_train_vec.shape[0], 1, X_train_vec.shape[1])
-    X_test_reshaped = X_test_vec.toarray().reshape(X_test_vec.shape[0], 1, X_test_vec.shape[1])
-    X_valid_reshaped = X_valid_vec.toarray().reshape(X_valid_vec.shape[0], 1, X_valid_vec.shape[1])
-
-    # One-hot encode labels
-    y_train_one_hot = to_categorical(df_train['Label_Rank'], num_classes=6)
-    y_test_one_hot = to_categorical(df_test['Label_Rank'], num_classes=6)
-    y_valid_one_hot = to_categorical(df_valid['Label_Rank'], num_classes=6)
-
-    return X_train_reshaped, y_train_one_hot, X_test_reshaped, y_test_one_hot, X_valid_reshaped, y_valid_one_hot
+    return train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid
 
 # Main function to execute the full process
-def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
+def process_data_pipeline_roberta(train_file, test_file, valid_file, batch_size=100, max_length=256):
     # Load and preprocess data
     print("Loading TSV files...")
     df_train, df_test, df_valid = load_tsv_files(train_file, test_file, valid_file)
@@ -85,9 +89,17 @@ def process_data_pipeline(train_file, test_file, valid_file, batch_size=100):
     df_test = encode_labels(df_test, truthiness_rank)
     df_valid = encode_labels(df_valid, truthiness_rank)
     
-    print("Preparing data for model input...")
-    X_train, y_train, X_test, y_test, X_valid, y_valid = prepare_data(df_train, df_test, df_valid)
+    print("Preparing data for RoBERTa model input...")
+    
+    # Initialize the RoBERTa tokenizer
+    tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+    
+    # Prepare the data
+    train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid = prepare_data_for_roberta(
+        df_train, df_test, df_valid, tokenizer, max_length
+    )
 
     print("Data preparation complete.")
     
-    return X_train, y_train, X_test, y_test#, X_valid, y_valid
+    return train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid
+
