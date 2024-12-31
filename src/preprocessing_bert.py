@@ -102,4 +102,4 @@ def process_data_pipeline(train_file, test_file, valid_file, max_length=128):
     X_train, y_train, X_test, y_test, X_valid, y_valid = prepare_data(df_train, df_test, df_valid, max_length=max_length)
 
     print("Data preparation complete.")
-    return X_train, y_train, X_test, y_test, X_valid, y_valid
+    return X_train, y_train, X_test, y_test#, X_valid, y_valid
