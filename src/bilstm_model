@@ -64,7 +64,7 @@ class BiLSTMClassifier:
         )
         return model
 
-    def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
+    def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
         """
         Trains the BiLSTM classifier. 
         
@@ -74,6 +74,12 @@ class BiLSTMClassifier:
 
         X_val, y_val: Same format for validation set (optional).
         """
+        # Convert y_train and y_val to one-hot encoding if they are integers
+        if len(y_train.shape) == 1 or y_train.shape[1] != self.num_classes:
+            y_train = to_categorical(y_train, num_classes=self.num_classes)
+        if y_val is not None and (len(y_val.shape) == 1 or y_val.shape[1] != self.num_classes):
+            y_val = to_categorical(y_val, num_classes=self.num_classes)
+
         callbacks = kwargs.pop('callbacks', [])
         # Early stopping, similar to your original RNN script
         if X_val is not None and y_val is not None:
@@ -89,7 +95,7 @@ class BiLSTMClassifier:
                 epochs=self.num_epochs,
                 validation_data=(X_val, y_val),
                 callbacks=callbacks,
-                batch_size=32,  # Can be adjusted for BiLSTM models
+                batch_size=batch_size,  # Can be adjusted for BiLSTM models
                 verbose=1,
                 **kwargs
             )
@@ -98,7 +104,7 @@ class BiLSTMClassifier:
                 X_train,
                 y_train,
                 epochs=self.num_epochs,
-                batch_size=32,
+                batch_size=batch_size,
                 verbose=1,
                 callbacks=callbacks,
                 **kwargs
@@ -157,16 +163,16 @@ class BiLSTMClassifier:
 
     def save_model(self, save_dir=None):
         """
-        Saves the trained model weights to the specified directory (default: weights/bilstm).
+        Saves the trained model weights and architecture to the specified directory (default: weights/bilstm).
         """
         if save_dir is None:
             save_dir = self.model_save_dir
         
         # Create the directory if it doesn't exist
         os.makedirs(save_dir, exist_ok=True)
-        # Save the model weights and architecture
-        self.model.save_weights(os.path.join(save_dir, 'bilstm_model_weights.h5'))
-        print(f"Model weights saved to {save_dir}")
+        # Save the entire model (architecture + weights) in Keras format
+        self.model.save(os.path.join(save_dir, 'bilstm_model.h5'))
+        print(f"Model saved to {save_dir}")
 
     def __getattr__(self, name):
         """
