@@ -3,7 +3,6 @@ from src.download_data import download
 # Roberta
 from src.preprocessing_roberta import process_data_pipeline_roberta
 from src.roberta_model import RoBERTaClassifier
-from src.train_roberta import train_roberta
 
 def roberta():
     print("Starting the pipeline...")
