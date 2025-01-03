@@ -10,7 +10,7 @@ class RoBERTaClassifier:
                  num_classes=6,
                  lstm_units= 200,
                  num_epochs=3, 
-                 dropout_rate=0.1, 
+                 dropout_rate=0.2, 
                  learning_rate=2e-5,
                  model_save_dir='weights/roberta'):
         """
