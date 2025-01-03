@@ -8,7 +8,7 @@ import os
 class RoBERTaClassifier: 
     def __init__(self, 
                  num_classes=6,
-                 lstm_units= 200
+                 lstm_units= 200,
                  num_epochs=3, 
                  dropout_rate=0.1, 
                  learning_rate=2e-5,
