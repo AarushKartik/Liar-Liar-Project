@@ -24,7 +24,7 @@ def bert():
 
     # Stage 4: Train the model
     print("Step 4: Training the model...")
-    classifier.fit(X_train, y_train, X_val, y_val)
+    classifier.fit(X_train, y_train, X_test, y_test)
     print("Model training complete.\n")
 
     # Stage 5: Evaluate the model
