@@ -19,7 +19,7 @@ def roberta():
 
     # Stage 3: Gather the model
     print("Step 3: Building the roBERTa model...")
-    model = Roberta(num_epochs=5, lstm_units=200, dropout_rate=0.2)
+    model = roberta(num_epochs=5, lstm_units=200, dropout_rate=0.2)
     print("Model built successfully.\n")
 
     # Stage 4: Train the model
