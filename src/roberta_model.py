@@ -37,6 +37,7 @@ class RoBERTaClassifier:
         model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config)
 
         # Set up the optimizer and compile
+        from tensorflow.keras.optimizers import Adam
         optimizer = Adam(learning_rate=self.learning_rate)
         model.compile(
             optimizer=optimizer, 
