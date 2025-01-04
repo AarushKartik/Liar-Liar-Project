@@ -76,7 +76,3 @@ class RoBERTaClassifier:
             )
 
         return history
-
-            )
-
-        return history
