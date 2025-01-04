@@ -1,5 +1,5 @@
 import tensorflow as tf
-tf.keras.optimizers.Adam import Adam
+from tf.keras.optimizers.Adam import Adam
 from tensorflow.keras.callbacks import EarlyStopping
 from transformers import TFRobertaForSequenceClassification, RobertaConfig, RobertaTokenizer
 
