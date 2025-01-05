@@ -1,4 +1,6 @@
 from src.download_data import download
+import tensorflow as tf
+
 
 # Roberta
 from src.preprocessing_roberta import process_data_pipeline_roberta
