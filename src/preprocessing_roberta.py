@@ -69,37 +69,27 @@ def prepare_data_for_roberta(df_train, df_test, df_valid, tokenizer, max_length=
     return train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid
 
 # Main function to execute the full process
-def process_data_pipeline_roberta(train_file, test_file, valid_file, batch_size=100, max_length=256):
+def process_data_pipeline_roberta(train_file, test_file, valid_file):
     # Load and preprocess data
-    print("Loading TSV files...")
     df_train, df_test, df_valid = load_tsv_files(train_file, test_file, valid_file)
-    
-    print("Renaming columns...")
     df_train = rename_columns(df_train)
     df_test = rename_columns(df_test)
     df_valid = rename_columns(df_valid)
-    
-    print("Computing statement lengths...")
-    df_train = compute_statement_length(df_train)
-    df_test = compute_statement_length(df_test)
-    df_valid = compute_statement_length(df_valid)
 
-    print("Encoding labels...")
-    df_train = encode_labels(df_train, truthiness_rank)
-    df_test = encode_labels(df_test, truthiness_rank)
-    df_valid = encode_labels(df_valid, truthiness_rank)
-    
-    print("Preparing data for RoBERTa model input...")
-    
-    # Initialize the RoBERTa tokenizer
-    tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-    
-    # Prepare the data
-    train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid = prepare_data_for_roberta(
-        df_train, df_test, df_valid, tokenizer, max_length
-    )
+    # Ensure raw text is preserved
+    df_train['Statement'] = df_train['Statement'].astype(str)
+    df_test['Statement'] = df_test['Statement'].astype(str)
+    df_valid['Statement'] = df_valid['Statement'].astype(str)
 
-    print("Data preparation complete.")
-    
-    return train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid
+    # Extract raw text for tokenization in main script
+    X_train = df_train['Statement'].tolist()
+    X_test = df_test['Statement'].tolist()
+    y_train = df_train['Label_Rank'].tolist()
+    y_test = df_test['Label_Rank'].tolist()
 
+    # Tokenize data
+    tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+    train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
+    test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
+
+    return X_train, y_train, X_test, y_test, train_encodings, test_encodings
