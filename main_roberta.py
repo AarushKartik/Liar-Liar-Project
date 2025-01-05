@@ -28,7 +28,7 @@ def roberta():
 
     # Step 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
-    model = RoBERTaClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
+    model = RoBERTaClassifier(num_epochs=5, dropout_rate=0.2)
     print("Model built successfully.\n")
 
     # Step 4: Prepare tokenized data for training
