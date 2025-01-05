@@ -29,49 +29,50 @@ class RoBERTaClassifier:
         # Load tokenizer for preprocessing
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
 
-    def build_model(self):
-        """
-        Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
-        """
-        # Load the RoBERTa model
-        roberta_model = TFRobertaForSequenceClassification.from_pretrained(
-            "roberta-base",
-            num_labels=self.num_classes,
-            from_pt=True
-        )
+   def build_model(self):
+    """
+    Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
+    """
+    # Load the RoBERTa model
+    roberta_model = TFRobertaForSequenceClassification.from_pretrained(
+        "roberta-base",
+        num_labels=self.num_classes,
+        from_pt=True
+    )
 
-        # Define input tensors explicitly
-        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
-        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+    # Use functional inputs for the model
+    input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+    attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
 
-        # Pass the inputs to the roberta layer
-        roberta_outputs = roberta_model.roberta(
-            input_ids=input_ids,
-            attention_mask=attention_mask
-        )
-        last_hidden_state = roberta_outputs.last_hidden_state
+    # Pass actual tensors to the RoBERTa model
+    roberta_outputs = roberta_model.roberta(
+        input_ids=input_ids,
+        attention_mask=attention_mask
+    )
+    last_hidden_state = roberta_outputs.last_hidden_state
 
-        # Add an LSTM layer
-        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(last_hidden_state)
+    # Add an LSTM layer for sequential modeling
+    lstm_layer = LSTM(self.lstm_units, return_sequences=False)(last_hidden_state)
 
-        # Add a Dropout layer
-        dropout_layer = Dropout(self.dropout_rate)(lstm_layer)
+    # Add dropout for regularization
+    dropout_layer = Dropout(self.dropout_rate)(lstm_layer)
 
-        # Add a Dense output layer
-        output_layer = Dense(self.num_classes, activation='softmax')(dropout_layer)
+    # Final Dense layer for classification
+    output_layer = Dense(self.num_classes, activation="softmax")(dropout_layer)
 
-        # Combine into a functional model
-        model = Model(inputs=[input_ids, attention_mask], outputs=output_layer)
+    # Construct the model
+    model = Model(inputs=[input_ids, attention_mask], outputs=output_layer)
 
-        # Compile the model
-        optimizer = Adam(learning_rate=self.learning_rate)
-        model.compile(
-            optimizer=optimizer,
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-            metrics=['accuracy']
-        )
+    # Compile the model
+    optimizer = Adam(learning_rate=self.learning_rate)
+    model.compile(
+        optimizer=optimizer,
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+        metrics=["accuracy"],
+    )
 
-        return model
+    return model
+
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
         """
