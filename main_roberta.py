@@ -3,7 +3,6 @@ from src.download_data import download
 # Roberta
 from src.preprocessing_roberta import process_data_pipeline_roberta
 from src.roberta_model import RoBERTaClassifier
-from transformers import RobertaTokenizer
 
 def roberta():
     print("Starting the pipeline...")
@@ -20,25 +19,17 @@ def roberta():
     )
     print("Data preprocessing complete.\n")
 
-    # Debug: Ensure X_test is a list of strings
-    print(f"Type of X_test before tokenization: {type(X_test)}")
-    print(f"First few entries in X_test: {X_test[:5]}")
-    print(f"Number of samples in X_test: {len(X_test)}")
-    print(f"Number of samples in y_test: {len(y_test)}\n")
+    # Debugging: Check the type of train_encodings and test_encodings
+    print(f"Type of train_encodings: {type(train_encodings)}")
+    print(f"Type of test_encodings: {type(test_encodings)}")
 
     # Step 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
     model = RoBERTaClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
-    tokenizer = model.tokenizer  # Use the tokenizer from the model
     print("Model built successfully.\n")
 
-    # Step 4: Tokenize and prepare the data
-    print("Step 4: Tokenizing the data...")
-    train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
-    test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
-    print("Data tokenization complete.\n")
-
-    # Convert BatchEncoding to Keras-compatible dictionaries
+    # Step 4: Prepare tokenized data for training
+    print("Step 4: Preparing tokenized data...")
     train_data = {
         "input_ids": train_encodings["input_ids"],
         "attention_mask": train_encodings["attention_mask"]
@@ -47,6 +38,7 @@ def roberta():
         "input_ids": test_encodings["input_ids"],
         "attention_mask": test_encodings["attention_mask"]
     }
+    print("Data preparation complete.\n")
 
     # Step 5: Train the model
     print("Step 5: Training the model...")
