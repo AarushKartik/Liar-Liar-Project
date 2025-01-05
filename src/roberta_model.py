@@ -35,29 +35,35 @@ class RoBERTaClassifier:
         )
         return model
 
-    def fit(self, train_data, y_train, X_val=None, y_val=None):
-        callbacks = []
-
-        if X_val is not None and y_val is not None:
-            early_stopping = tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=3, restore_best_weights=True)
-            callbacks.append(early_stopping)
+   def fit(self, x, y, validation_data=None, **kwargs):
+        """
+        Fit the model to the training data.
+        
+        Args:
+            x: Input data (dictionary of 'input_ids' and 'attention_mask').
+            y: Labels for training.
+            validation_data: Tuple (X_val, y_val) for validation.
+            **kwargs: Additional arguments for the model's fit method.
+        """
+        if validation_data is not None:
+            X_val, y_val = validation_data
             history = self.model.fit(
-                train_data,
-                y_train,
+                x=x,
+                y=y,
                 validation_data=(X_val, y_val),
                 epochs=self.num_epochs,
                 batch_size=32,
-                callbacks=callbacks,
                 verbose=1,
+                **kwargs,
             )
         else:
             history = self.model.fit(
-                train_data,
-                y_train,
+                x=x,
+                y=y,
                 epochs=self.num_epochs,
                 batch_size=32,
-                callbacks=callbacks,
                 verbose=1,
+                **kwargs,
             )
 
         return history
