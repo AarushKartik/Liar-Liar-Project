@@ -7,9 +7,9 @@ import traceback
 from src.preprocessing_roberta import process_data_pipeline_roberta
 from src.roberta_model import RoBERTaClassifier
 
-# Enable mixed precision
-from tensorflow.keras.mixed_precision import set_global_policy
-set_global_policy("mixed_float16")
+# # Enable mixed precision
+# from tensorflow.keras.mixed_precision import set_global_policy
+# set_global_policy("mixed_float16")
 
 def roberta():
     print("Starting the pipeline...")
