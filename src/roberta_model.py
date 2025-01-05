@@ -1,6 +1,6 @@
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, RobertaConfig, RobertaTokenizer
-from tensorflow.keras.layers import LSTM, Dropout, Dense
+from tensorflow.keras.layers import LSTM, Dropout, Dense, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
@@ -32,17 +32,18 @@ class RoBERTaClassifier:
         """
         Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
         """
-        # Load a RoBERTa configuration
-        config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
-
         # Load the RoBERTa model
-        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config, from_pt=True)
+        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", num_labels=self.num_classes, from_pt=True)
 
-        # Extract the base model's output
-        roberta_output = roberta_model.roberta.output
+        # Define the input shape
+        input_ids = Input(shape=(512,), dtype=tf.int32, name="input_ids")
+        attention_mask = Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+
+        # Get the outputs from the RoBERTa base model
+        roberta_outputs = roberta_model.roberta(input_ids, attention_mask=attention_mask).last_hidden_state
 
         # Add an LSTM layer
-        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(roberta_output)
+        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(roberta_outputs)
 
         # Add a Dropout layer
         dropout_layer = Dropout(self.dropout_rate)(lstm_layer)
@@ -51,7 +52,7 @@ class RoBERTaClassifier:
         output_layer = Dense(self.num_classes, activation='softmax')(dropout_layer)
 
         # Combine into a functional model
-        model = Model(inputs=roberta_model.input, outputs=output_layer)
+        model = Model(inputs=[input_ids, attention_mask], outputs=output_layer)
 
         # Compile the model
         optimizer = Adam(learning_rate=self.learning_rate)
