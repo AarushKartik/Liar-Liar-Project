@@ -1,9 +1,10 @@
 import tensorflow as tf
-from transformers import TFRobertaForSequenceClassification, RobertaConfig, RobertaTokenizer
+from transformers import TFRobertaForSequenceClassification, RobertaTokenizer
 from tensorflow.keras.layers import LSTM, Dropout, Dense
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
+
 
 class RoBERTaClassifier:
     def __init__(self, 
@@ -34,18 +35,18 @@ class RoBERTaClassifier:
         """
         # Load the RoBERTa model
         roberta_model = TFRobertaForSequenceClassification.from_pretrained(
-            "roberta-base", 
-            num_labels=self.num_classes, 
+            "roberta-base",
+            num_labels=self.num_classes,
             from_pt=True
         )
 
         # Define input tensors explicitly
-        input_ids = tf.keras.layers.Input(shape=(512,), dtype=tf.int32, name="input_ids")
-        attention_mask = tf.keras.layers.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
 
         # Pass the inputs to the roberta layer
         roberta_outputs = roberta_model.roberta(
-            input_ids=input_ids, 
+            input_ids=input_ids,
             attention_mask=attention_mask
         )
         last_hidden_state = roberta_outputs.last_hidden_state
@@ -65,7 +66,7 @@ class RoBERTaClassifier:
         # Compile the model
         optimizer = Adam(learning_rate=self.learning_rate)
         model.compile(
-            optimizer=optimizer, 
+            optimizer=optimizer,
             loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
             metrics=['accuracy']
         )
