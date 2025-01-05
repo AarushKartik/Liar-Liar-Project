@@ -51,7 +51,7 @@ def roberta():
     y=y_train,
     validation_data=(test_data, y_test),
     epochs=5,
-    batch_size=32,
+    batch_size=16,
 )
     print("Model training complete.\n")
 
