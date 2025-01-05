@@ -1,8 +1,9 @@
+# src/preprocessing_bert.py (Now adapted for PyTorch)
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from transformers import BertTokenizer
-from tensorflow.keras.utils import to_categorical
 
 # Define truthiness ranking
 truthiness_rank = {
@@ -60,7 +61,7 @@ def prepare_data(df_train, df_test, df_valid, max_length=128):
             truncation=True,
             padding='max_length',
             max_length=max_length,
-            return_tensors='np'
+            return_tensors='np'  # or 'pt' if you prefer direct PyTorch. Using 'np' is still okay.
         )
         return encodings['input_ids'], encodings['attention_mask']
 
@@ -69,10 +70,12 @@ def prepare_data(df_train, df_test, df_valid, max_length=128):
     X_test_input_ids, X_test_attention_mask = tokenize_data(df_test)
     X_valid_input_ids, X_valid_attention_mask = tokenize_data(df_valid)
 
-    # Convert labels to one-hot encoding (if needed, optional for BERT classification)
-    y_train = to_categorical(df_train['Label_Rank'], num_classes=6)
-    y_test = to_categorical(df_test['Label_Rank'], num_classes=6)
-    y_valid = to_categorical(df_valid['Label_Rank'], num_classes=6)
+    # Convert labels to one-hot encoding (if needed). Otherwise, you can keep them as integer.
+    # For consistency with your original code, we keep one-hot. PyTorch model will handle them.
+    num_classes = 6
+    y_train = np.eye(num_classes)[df_train['Label_Rank'].values]
+    y_test = np.eye(num_classes)[df_test['Label_Rank'].values]
+    y_valid = np.eye(num_classes)[df_valid['Label_Rank'].values]
 
     return (
         (X_train_input_ids, X_train_attention_mask), y_train,
@@ -99,7 +102,9 @@ def process_data_pipeline_bert(train_file, test_file, valid_file, max_length=128
     df_valid = encode_labels(df_valid, truthiness_rank)
     
     print("Preparing data for BERT classification...")
-    X_train, y_train, X_test, y_test, X_valid, y_valid = prepare_data(df_train, df_test, df_valid, max_length=max_length)
+    X_train, y_train, X_test, y_test, X_valid, y_valid = prepare_data(
+        df_train, df_test, df_valid, max_length=max_length
+    )
 
     print("Data preparation complete.")
-    return X_train, y_train, X_test, y_test#, X_valid, y_valid
+    return X_train, y_train, X_test, y_test, X_valid, y_valid
