@@ -39,6 +39,8 @@ def roberta():
         "attention_mask": test_encodings["attention_mask"]
     }
     print("Data preparation complete.\n")
+    y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
+    y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
 
     # Step 5: Train the model
     print("Step 5: Training the model...")
