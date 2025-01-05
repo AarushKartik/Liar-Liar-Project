@@ -1,6 +1,7 @@
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, RobertaConfig, RobertaTokenizer
-from tensorflow.keras.optimizers import Adam  # Correct import statement
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
 
 class RoBERTaClassifier:
     def __init__(self, 
@@ -32,10 +33,10 @@ class RoBERTaClassifier:
         config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
 
         # Initialize the TFRobertaForSequenceClassification model
-        model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config)
+        model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config, from_pt=True)
 
         # Set up the optimizer
-        optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
+        optimizer = Adam(learning_rate=self.learning_rate)
 
         # Compile the model with SparseCategoricalCrossentropy (for integer labels)
         model.compile(
