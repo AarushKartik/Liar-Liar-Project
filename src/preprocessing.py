@@ -49,12 +49,17 @@ def encode_labels(df, truthiness_rank):
 
 # Tokenize data for transformer models
 def tokenize_statements(df, tokenizer):
+    """
+    Tokenizes statements using the RobertaTokenizer. Ensures compatibility with the transformers library.
+    """
+    # Fix: Ensure `df['Statement']` is a list of strings
+    statements = df['Statement'].tolist()
     encodings = tokenizer(
-        df['Statement'].tolist(), 
-        padding=True, 
-        truncation=True, 
-        max_length=512, 
-        return_tensors="np"
+        statements,
+        padding=True,
+        truncation=True,
+        max_length=512,
+        return_tensors="np"  # Outputs NumPy-compatible arrays
     )
     return encodings
 
@@ -86,10 +91,14 @@ def prepare_data_traditional(df_train, df_test, df_valid):
 
 # Prepare data for transformer models
 def prepare_data_transformer(df_train, df_test, df_valid, tokenizer):
+    """
+    Prepares tokenized data for transformer-based models.
+    """
     train_encodings = tokenize_statements(df_train, tokenizer)
     test_encodings = tokenize_statements(df_test, tokenizer)
     valid_encodings = tokenize_statements(df_valid, tokenizer)
 
+    # Fix: Ensure data is passed as dictionaries for compatibility
     X_train = {
         "input_ids": train_encodings["input_ids"],
         "attention_mask": train_encodings["attention_mask"]
