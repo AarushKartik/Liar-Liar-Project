@@ -30,32 +30,32 @@ class RoBERTaClassifier:
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
 
     def build_model(self):
-    from transformers import TFRobertaForSequenceClassification
-
-    # Load a RoBERTa configuration with the desired number of labels
-    config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
-
-    # Initialize the TFRobertaForSequenceClassification model
-    roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config)
-
-    # Define the inputs
-    input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
-    attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
-
-    # Forward pass through the RoBERTa model
-    outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
-
-    # Create the final model
-    model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=outputs.logits)
-
-    # Compile the model
-    optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
-    model.compile(
-        optimizer=optimizer,
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=["accuracy"],
-    )
-    return model
+        from transformers import TFRobertaForSequenceClassification
+    
+        # Load a RoBERTa configuration with the desired number of labels
+        config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
+    
+        # Initialize the TFRobertaForSequenceClassification model
+        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config)
+    
+        # Define the inputs
+        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+    
+        # Forward pass through the RoBERTa model
+        outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
+    
+        # Create the final model
+        model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=outputs.logits)
+    
+        # Compile the model
+        optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
+        model.compile(
+            optimizer=optimizer,
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=["accuracy"],
+        )
+        return model
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
         """
