@@ -15,20 +15,36 @@ def roberta():
 
     # Stage 2: Process the data
     print("Step 2: Preprocessing the data...")
-    X_train, y_train, X_test, y_test, train_encodings, test_encodings = process_data_pipeline_roberta('train.tsv', 'test.tsv', 'valid.tsv')
+    X_train, y_train, X_test, y_test, train_encodings, test_encodings = process_data_pipeline_roberta(
+        'train.tsv', 'test.tsv', 'valid.tsv'
+    )
     print("Data preprocessing complete.\n")
 
     # Stage 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
     model = RoBERTaClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
+    tokenizer = model.tokenizer  # Use the tokenizer from the model
     print("Model built successfully.\n")
 
     # Stage 4: Tokenize and prepare the data for training
-    tokenizer = model.tokenizer  # Using the tokenizer from the model
+    print("Step 4: Tokenizing the data...")
+    
+    # Debugging and enforcing proper format for X_train and X_test
+    print(f"Type of X_train: {type(X_train)}")
+    print(f"First few entries in X_train: {X_train[:5]}")
+    print(f"Type of X_test: {type(X_test)}")
+    print(f"First few entries in X_test: {X_test[:5]}")
 
-    # Ensure you tokenize the data correctly for both training and validation sets
+    # Ensure X_train and X_test are lists of strings
+    if not isinstance(X_train, list) or not all(isinstance(x, str) for x in X_train):
+        X_train = [str(x) for x in X_train]
+    if not isinstance(X_test, list) or not all(isinstance(x, str) for x in X_test):
+        X_test = [str(x) for x in X_test]
+
+    # Tokenize training and test data
     train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
+    print("Data tokenization complete.\n")
 
     # Stage 5: Train the model
     print("Step 5: Training the model...")
@@ -37,4 +53,3 @@ def roberta():
 
 if __name__ == '__main__':
     roberta()
-
