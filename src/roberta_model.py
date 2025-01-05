@@ -53,7 +53,7 @@ class RoBERTaClassifier:
                 y=y,
                 validation_data=(X_val, y_val),
                 epochs=self.num_epochs,
-                batch_size=32,
+                batch_size=batch_size,
                 verbose=1,
                 **kwargs,
             )
@@ -62,7 +62,7 @@ class RoBERTaClassifier:
                 x=x,
                 y=y,
                 epochs=self.num_epochs,
-                batch_size=32,
+                batch_size=batch_size,
                 verbose=1,
                 **kwargs,
             )
