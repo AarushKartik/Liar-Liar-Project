@@ -35,7 +35,7 @@ class RoBERTaClassifier:
         )
         return model
 
-    def fit(self, x, y, validation_data=None, **kwargs):
+    def fit(self, x, y, validation_data=None, batch_size = 32, verbose =1, **kwargs):
         """
         Fit the model to the training data.
         
