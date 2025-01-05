@@ -20,17 +20,19 @@ def roberta():
     )
     print("Data preprocessing complete.\n")
 
-    # Debugging: Ensure X_train and y_train sizes match
-    print(f"Number of samples in X_train: {len(X_train)}")
-    print(f"Number of samples in y_train: {len(y_train)}")
+    # Debugging: Check the type and content of X_train and X_test
+    print(f"Type of X_train: {type(X_train)}")
+    print(f"First few entries in X_train: {X_train[:5]}")
+    print(f"Type of X_test: {type(X_test)}")
+    print(f"First few entries in X_test: {X_test[:5]}")
 
-    # Ensure X_train and y_train are aligned
-    if len(X_train) != len(y_train):
-        min_samples = min(len(X_train), len(y_train))
-        X_train = X_train[:min_samples]
-        y_train = y_train[:min_samples]
+    # Ensure X_train and X_test are lists of strings
+    if not isinstance(X_train, list) or not all(isinstance(x, str) for x in X_train):
+        X_train = [str(x) for x in X_train]
+    if not isinstance(X_test, list) or not all(isinstance(x, str) for x in X_test):
+        X_test = [str(x) for x in X_test]
 
-    print(f"Aligned number of samples in X_train and y_train: {len(X_train)}\n")
+    print(f"Validated number of samples in X_train: {len(X_train)}\n")
 
     # Stage 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
@@ -61,4 +63,3 @@ def roberta():
 
 if __name__ == '__main__':
     roberta()
-
