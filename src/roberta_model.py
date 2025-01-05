@@ -32,18 +32,22 @@ class RoBERTaClassifier:
         """
         Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
         """
+        # Load a RoBERTa configuration
+        config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
+
         # Load the RoBERTa model
-        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", num_labels=self.num_classes, from_pt=True)
+        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config, from_pt=True)
 
         # Define the input shape
-        input_ids = Input(shape=(512,), dtype=tf.int32, name="input_ids")
-        attention_mask = Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
 
         # Get the outputs from the RoBERTa base model
-        roberta_outputs = roberta_model.roberta(input_ids, attention_mask=attention_mask).last_hidden_state
+        roberta_outputs = roberta_model.roberta(input_ids=input_ids, attention_mask=attention_mask)
+        last_hidden_state = roberta_outputs.last_hidden_state
 
         # Add an LSTM layer
-        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(roberta_outputs)
+        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(last_hidden_state)
 
         # Add a Dropout layer
         dropout_layer = Dropout(self.dropout_rate)(lstm_layer)
@@ -94,3 +98,4 @@ class RoBERTaClassifier:
             )
 
         return history
+
