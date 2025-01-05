@@ -20,6 +20,18 @@ def roberta():
     )
     print("Data preprocessing complete.\n")
 
+    # Debugging: Ensure X_train and y_train sizes match
+    print(f"Number of samples in X_train: {len(X_train)}")
+    print(f"Number of samples in y_train: {len(y_train)}")
+
+    # Ensure X_train and y_train are aligned
+    if len(X_train) != len(y_train):
+        min_samples = min(len(X_train), len(y_train))
+        X_train = X_train[:min_samples]
+        y_train = y_train[:min_samples]
+
+    print(f"Aligned number of samples in X_train and y_train: {len(X_train)}\n")
+
     # Stage 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
     model = RoBERTaClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
@@ -28,20 +40,6 @@ def roberta():
 
     # Stage 4: Tokenize and prepare the data for training
     print("Step 4: Tokenizing the data...")
-    
-    # Debugging and enforcing proper format for X_train and X_test
-    print(f"Type of X_train: {type(X_train)}")
-    print(f"First few entries in X_train: {X_train[:5]}")
-    print(f"Type of X_test: {type(X_test)}")
-    print(f"First few entries in X_test: {X_test[:5]}")
-
-    # Ensure X_train and X_test are lists of strings
-    if not isinstance(X_train, list) or not all(isinstance(x, str) for x in X_train):
-        X_train = [str(x) for x in X_train]
-    if not isinstance(X_test, list) or not all(isinstance(x, str) for x in X_test):
-        X_test = [str(x) for x in X_test]
-
-    # Tokenize training and test data
     train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
     print("Data tokenization complete.\n")
