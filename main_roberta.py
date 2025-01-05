@@ -12,9 +12,24 @@ from pydrive.drive import GoogleDrive
 from src.preprocessing_roberta import process_data_pipeline_roberta
 from src.roberta_model import RoBERTaClassifier
 
-# # Enable mixed precision
-# from tensorflow.keras.mixed_precision import set_global_policy
-# set_global_policy("mixed_float16")
+
+class SaveWeightsCallback(tf.keras.callbacks.Callback):
+    def __init__(self, save_interval, model, save_dir, drive_folder_name):
+        super().__init__()
+        self.save_interval = save_interval
+        self.model = model
+        self.save_dir = save_dir
+        self.drive_folder_name = drive_folder_name
+
+    def on_train_batch_end(self, batch, logs=None):
+        total_batches = self.params['steps']
+        interval_batches = total_batches // self.save_interval
+        if batch % interval_batches == 0 or batch == total_batches - 1:
+            weight_path = os.path.join(self.save_dir, f"weights_batch_{batch}.h5")
+            self.model.save_weights(weight_path)
+            print(f"Saved weights at batch {batch} to {weight_path}.")
+            upload_to_drive(weight_path, self.drive_folder_name)
+
 
 def upload_to_drive(local_path, drive_folder_name):
     """
@@ -88,31 +103,32 @@ def roberta():
     y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
     y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
 
-    # Step 5: Train the model
+    # Step 5: Train the model with the custom callback
     print("Step 5: Training the model...")
     try:
+        save_dir = "./saved_weights"
+        os.makedirs(save_dir, exist_ok=True)
+        
+        callback = SaveWeightsCallback(
+            save_interval=5,
+            model=model,
+            save_dir=save_dir,
+            drive_folder_name="weights"
+        )
+
         model.fit(
             x=train_data,
             y=y_train,
             validation_data=(test_data, y_test),
             epochs=2,
             batch_size=2,
+            callbacks=[callback]
         )
         print("Model training complete.\n")
-
-        # Save model weights
-        print("Saving model weights...")
-        weights_path = "roberta_weights.h5"
-        model.save_weights(weights_path)
-        print(f"Weights saved locally at {weights_path}.\n")
-
-        # Upload weights to Google Drive
-        print("Uploading weights to Google Drive...")
-        upload_to_drive(weights_path, "weights")
     except Exception as e:
         print("An error occurred during model training:")
         traceback.print_exc()
 
+
 if __name__ == '__main__':
     roberta()
-
