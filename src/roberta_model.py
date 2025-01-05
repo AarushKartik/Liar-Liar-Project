@@ -30,41 +30,32 @@ class RoBERTaClassifier:
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
 
     def build_model(self):
-        """
-        Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
-        """
-        class CustomRoBERTaModel(Model):
-            def __init__(self, num_classes, lstm_units, dropout_rate, learning_rate):
-                super(CustomRoBERTaModel, self).__init__()
-                self.roberta = TFRobertaForSequenceClassification.from_pretrained(
-                    "roberta-base",
-                    num_labels=num_classes,
-                    from_pt=True
-                ).roberta
-                self.lstm = LSTM(lstm_units, return_sequences=False)
-                self.dropout = Dropout(dropout_rate)
-                self.classifier = Dense(num_classes, activation="softmax")
+    from transformers import TFRobertaForSequenceClassification
 
-            def call(self, inputs):
-                input_ids = inputs["input_ids"]
-                attention_mask = inputs["attention_mask"]
-                roberta_output = self.roberta(input_ids=input_ids, attention_mask=attention_mask)
-                last_hidden_state = roberta_output.last_hidden_state
-                x = self.lstm(last_hidden_state)
-                x = self.dropout(x)
-                output = self.classifier(x)
-                return output
+    # Load a RoBERTa configuration with the desired number of labels
+    config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
 
-        # Initialize the custom model
-        model = CustomRoBERTaModel(self.num_classes, self.lstm_units, self.dropout_rate, self.learning_rate)
+    # Initialize the TFRobertaForSequenceClassification model
+    roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config)
 
-        # Compile the model
-        model.compile(
-            optimizer=Adam(learning_rate=self.learning_rate),
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-            metrics=["accuracy"]
-        )
-        return model
+    # Define the inputs
+    input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+    attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+
+    # Forward pass through the RoBERTa model
+    outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
+
+    # Create the final model
+    model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=outputs.logits)
+
+    # Compile the model
+    optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
+    model.compile(
+        optimizer=optimizer,
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=["accuracy"],
+    )
+    return model
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
         """
