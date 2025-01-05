@@ -10,7 +10,7 @@ class RoBERTaClassifier:
     def __init__(self, 
                  num_classes=6,
                  lstm_units=200,
-                 num_epochs=3, 
+                 num_epochs=3,
                  dropout_rate=0.2, 
                  learning_rate=2e-5,
                  model_save_dir='weights/roberta'):
@@ -33,44 +33,37 @@ class RoBERTaClassifier:
         """
         Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
         """
-        # Load the RoBERTa model
-        roberta_model = TFRobertaForSequenceClassification.from_pretrained(
-            "roberta-base",
-            num_labels=self.num_classes,
-            from_pt=True
-        )
+        class CustomRoBERTaModel(Model):
+            def __init__(self, num_classes, lstm_units, dropout_rate, learning_rate):
+                super(CustomRoBERTaModel, self).__init__()
+                self.roberta = TFRobertaForSequenceClassification.from_pretrained(
+                    "roberta-base",
+                    num_labels=num_classes,
+                    from_pt=True
+                ).roberta
+                self.lstm = LSTM(lstm_units, return_sequences=False)
+                self.dropout = Dropout(dropout_rate)
+                self.classifier = Dense(num_classes, activation="softmax")
 
-        # Use functional inputs for the model
-        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
-        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+            def call(self, inputs):
+                input_ids = inputs["input_ids"]
+                attention_mask = inputs["attention_mask"]
+                roberta_output = self.roberta(input_ids=input_ids, attention_mask=attention_mask)
+                last_hidden_state = roberta_output.last_hidden_state
+                x = self.lstm(last_hidden_state)
+                x = self.dropout(x)
+                output = self.classifier(x)
+                return output
 
-        # Pass actual tensors to the RoBERTa model
-        roberta_outputs = roberta_model.roberta(
-            input_ids=input_ids,
-            attention_mask=attention_mask
-        )
-        last_hidden_state = roberta_outputs.last_hidden_state
-
-        # Add an LSTM layer for sequential modeling
-        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(last_hidden_state)
-
-        # Add dropout for regularization
-        dropout_layer = Dropout(self.dropout_rate)(lstm_layer)
-
-        # Final Dense layer for classification
-        output_layer = Dense(self.num_classes, activation="softmax")(dropout_layer)
-
-        # Construct the model
-        model = Model(inputs=[input_ids, attention_mask], outputs=output_layer)
+        # Initialize the custom model
+        model = CustomRoBERTaModel(self.num_classes, self.lstm_units, self.dropout_rate, self.learning_rate)
 
         # Compile the model
-        optimizer = Adam(learning_rate=self.learning_rate)
         model.compile(
-            optimizer=optimizer,
+            optimizer=Adam(learning_rate=self.learning_rate),
             loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-            metrics=["accuracy"],
+            metrics=["accuracy"]
         )
-
         return model
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
@@ -101,5 +94,4 @@ class RoBERTaClassifier:
                 callbacks=callbacks,
                 **kwargs
             )
-
         return history
