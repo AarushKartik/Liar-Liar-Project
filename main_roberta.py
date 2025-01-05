@@ -7,6 +7,11 @@ import traceback
 from src.preprocessing_roberta import process_data_pipeline_roberta
 from src.roberta_model import RoBERTaClassifier
 
+# Enable mixed precision
+from tensorflow.keras.mixed_precision import experimental as mixed_precision
+policy = mixed_precision.Policy("mixed_float16")
+mixed_precision.set_policy(policy)
+
 def roberta():
     print("Starting the pipeline...")
 
@@ -28,7 +33,7 @@ def roberta():
 
     # Step 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
-    model = RoBERTaClassifier(num_epochs=5, dropout_rate=0.2)
+    model = RoBERTaClassifier(num_epochs=5, dropout_rate=0.2, learning_rate=2e-5)
     print("Model built successfully.\n")
 
     # Step 4: Prepare tokenized data for training
@@ -41,6 +46,7 @@ def roberta():
         "input_ids": test_encodings["input_ids"],
         "attention_mask": test_encodings["attention_mask"]
     }
+    
     print("Data preparation complete.\n")
     y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
     y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
@@ -53,17 +59,12 @@ def roberta():
             y=y_train,
             validation_data=(test_data, y_test),
             epochs=5,
-            batch_size=16,
+            batch_size=2,
         )
         print("Model training complete.\n")
-    except KeyboardInterrupt:
-        print("\nTraining interrupted (KeyboardInterrupt).")
-        traceback.print_exc()
     except Exception as e:
         print("An error occurred during model training:")
         traceback.print_exc()
-        
-    print("Model training complete.\n")
 
 if __name__ == '__main__':
     roberta()
