@@ -45,6 +45,7 @@ class RoBERTaClassifier:
             validation_data: Tuple (X_val, y_val) for validation.
             **kwargs: Additional arguments for the model's fit method.
         """
+        kwargs.pop("epochs", None)
         if validation_data is not None:
             X_val, y_val = validation_data
             history = self.model.fit(
