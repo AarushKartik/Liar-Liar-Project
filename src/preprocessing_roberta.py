@@ -70,18 +70,40 @@ def prepare_data_for_roberta(df_train, df_test, df_valid, tokenizer, max_length=
 
 # Main function to execute the full process
 def process_data_pipeline_roberta(train_file, test_file, valid_file):
+    # Define truthiness ranking
+    truthiness_rank = {
+        'true': 0,
+        'mostly-true': 1,
+        'half-true': 2,
+        'barely-true': 3,
+        'false': 4,
+        'pants-fire': 5
+    }
+
     # Load and preprocess data
     df_train, df_test, df_valid = load_tsv_files(train_file, test_file, valid_file)
     df_train = rename_columns(df_train)
     df_test = rename_columns(df_test)
     df_valid = rename_columns(df_valid)
 
+    # Debug: Check columns after renaming
+    print(f"Columns in df_train after renaming: {df_train.columns}")
+
+    # Encode labels
+    df_train = encode_labels(df_train, truthiness_rank)
+    df_test = encode_labels(df_test, truthiness_rank)
+    df_valid = encode_labels(df_valid, truthiness_rank)
+
+    # Debug: Check if Label_Rank was created
+    print(f"Columns in df_train after encoding: {df_train.columns}")
+    print(f"First few Label_Rank values: {df_train['Label_Rank'].head()}")
+
     # Ensure raw text is preserved
     df_train['Statement'] = df_train['Statement'].astype(str)
     df_test['Statement'] = df_test['Statement'].astype(str)
     df_valid['Statement'] = df_valid['Statement'].astype(str)
 
-    # Extract raw text for tokenization in main script
+    # Extract raw text for tokenization
     X_train = df_train['Statement'].tolist()
     X_test = df_test['Statement'].tolist()
     y_train = df_train['Label_Rank'].tolist()
