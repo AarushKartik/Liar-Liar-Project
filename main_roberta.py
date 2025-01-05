@@ -42,7 +42,13 @@ def roberta():
 
     # Step 5: Train the model
     print("Step 5: Training the model...")
-    model.fit(train_data, y_train, X_val=test_data, y_val=y_test)
+    model.fit(
+    x=train_data,
+    y=y_train,
+    validation_data=(test_data, y_test),
+    epochs=5,
+    batch_size=32,
+)
     print("Model training complete.\n")
 
 if __name__ == '__main__':
