@@ -53,7 +53,7 @@ def tokenize_statements(df, tokenizer):
     Tokenizes statements using the RobertaTokenizer. Ensures compatibility with the transformers library.
     """
     # Fix: Ensure `df['Statement']` is a list of strings
-    statements = df['Statement'].tolist()
+    statements = df['Statement'].astype(str).tolist()  # Convert to strings explicitly
     encodings = tokenizer(
         statements,
         padding=True,
