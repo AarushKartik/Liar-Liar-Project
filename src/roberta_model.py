@@ -1,19 +1,25 @@
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, RobertaConfig, RobertaTokenizer
+from tensorflow.keras.layers import LSTM, Dropout, Dense
+from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
 
 class RoBERTaClassifier:
     def __init__(self, 
                  num_classes=6,
+                 lstm_units=200,
                  num_epochs=3, 
+                 dropout_rate=0.2, 
                  learning_rate=2e-5,
                  model_save_dir='weights/roberta'):
         """
         Initialize the RoBERTa model with hyperparameters.
         """
         self.num_classes = num_classes
+        self.lstm_units = lstm_units
         self.num_epochs = num_epochs
+        self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
         self.model_save_dir = model_save_dir
 
@@ -24,21 +30,34 @@ class RoBERTaClassifier:
 
     def build_model(self):
         """
-        Builds and compiles a TFRobertaForSequenceClassification model.
+        Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
         """
-        # Load a RoBERTa configuration with the desired number of labels
+        # Load a RoBERTa configuration
         config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
 
-        # Initialize the TFRobertaForSequenceClassification model
-        model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config, from_pt=True)
+        # Load the RoBERTa model
+        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config, from_pt=True)
 
-        # Set up the optimizer
+        # Extract the base model's output
+        roberta_output = roberta_model.roberta.output
+
+        # Add an LSTM layer
+        lstm_layer = LSTM(self.lstm_units, return_sequences=False)(roberta_output)
+
+        # Add a Dropout layer
+        dropout_layer = Dropout(self.dropout_rate)(lstm_layer)
+
+        # Add a Dense output layer
+        output_layer = Dense(self.num_classes, activation='softmax')(dropout_layer)
+
+        # Combine into a functional model
+        model = Model(inputs=roberta_model.input, outputs=output_layer)
+
+        # Compile the model
         optimizer = Adam(learning_rate=self.learning_rate)
-
-        # Compile the model with SparseCategoricalCrossentropy (for integer labels)
         model.compile(
             optimizer=optimizer, 
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
             metrics=['accuracy']
         )
 
@@ -46,7 +65,7 @@ class RoBERTaClassifier:
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
         """
-        Trains the RoBERTa classifier. 
+        Trains the RoBERTa classifier.
         """
         callbacks = kwargs.pop('callbacks', [])
         if X_val is not None and y_val is not None:
@@ -58,7 +77,7 @@ class RoBERTaClassifier:
                 epochs=self.num_epochs,
                 validation_data=(X_val, y_val),
                 callbacks=callbacks,
-                batch_size=8,  # Adjust batch size as needed
+                batch_size=8,
                 verbose=1,
                 **kwargs
             )
