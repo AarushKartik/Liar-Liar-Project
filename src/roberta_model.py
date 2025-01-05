@@ -1,6 +1,6 @@
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, RobertaConfig, RobertaTokenizer
-from tensorflow.keras.layers import LSTM, Dropout, Dense, Input
+from tensorflow.keras.layers import LSTM, Dropout, Dense
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping
@@ -32,17 +32,14 @@ class RoBERTaClassifier:
         """
         Builds and compiles a TFRobertaForSequenceClassification model with an additional LSTM layer.
         """
-        # Load a RoBERTa configuration
-        config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
-
         # Load the RoBERTa model
-        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", config=config, from_pt=True)
+        roberta_model = TFRobertaForSequenceClassification.from_pretrained("roberta-base", num_labels=self.num_classes, from_pt=True)
 
-        # Define the input shape
-        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
-        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+        # Define input tensors as TensorFlow Tensors (not Keras Tensors)
+        input_ids = tf.keras.layers.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+        attention_mask = tf.keras.layers.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
 
-        # Get the outputs from the RoBERTa base model
+        # Pass inputs to the roberta layer
         roberta_outputs = roberta_model.roberta(input_ids=input_ids, attention_mask=attention_mask)
         last_hidden_state = roberta_outputs.last_hidden_state
 
@@ -98,4 +95,3 @@ class RoBERTaClassifier:
             )
 
         return history
-
