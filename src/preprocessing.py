@@ -52,16 +52,17 @@ def tokenize_statements(df, tokenizer):
     """
     Tokenizes statements using the RobertaTokenizer. Ensures compatibility with the transformers library.
     """
-    # Fix: Ensure `df['Statement']` is a list of strings
-    statements = df['Statement'].astype(str).tolist()  # Convert to strings explicitly
+    # Ensure `df['Statement']` is a list of strings
+    statements = df['Statement'].astype(str).tolist()  # Explicitly convert all data to strings
     encodings = tokenizer(
-        statements,
+        statements,  # Pass a list of strings
         padding=True,
         truncation=True,
         max_length=512,
         return_tensors="np"  # Outputs NumPy-compatible arrays
     )
     return encodings
+
 
 # Vectorize data for traditional models
 def vectorize_statements(df, vectorizer=None, fit=False):
@@ -142,6 +143,11 @@ def process_data_pipeline(train_file, test_file, valid_file, model_type='transfo
 
     if model_type == 'transformer':
         print("Preparing data for transformer model input...")
+        
+        # Fix: Explicitly handle non-string data
+        for df in [df_train, df_test, df_valid]:
+            df['Statement'] = df['Statement'].astype(str)  # Convert all values to strings
+        
         return prepare_data_transformer(df_train, df_test, df_valid, tokenizer)
     elif model_type == 'traditional':
         print("Preparing data for traditional model input...")
