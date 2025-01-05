@@ -6,9 +6,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 class RoBERTaClassifier:
     def __init__(self, 
                  num_classes=6,
-                 lstm_units=200,
                  num_epochs=3, 
-                 dropout_rate=0.2, 
                  learning_rate=2e-5,
                  model_save_dir='weights/roberta'):
         """
@@ -16,7 +14,6 @@ class RoBERTaClassifier:
         """
         self.num_classes = num_classes
         self.num_epochs = num_epochs
-        self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
         self.model_save_dir = model_save_dir
 
@@ -61,7 +58,7 @@ class RoBERTaClassifier:
                 epochs=self.num_epochs,
                 validation_data=(X_val, y_val),
                 callbacks=callbacks,
-                batch_size=8,  # Reduced batch size for stability
+                batch_size=8,  # Adjust batch size as needed
                 verbose=1,
                 **kwargs
             )
