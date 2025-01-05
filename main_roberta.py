@@ -20,19 +20,18 @@ def roberta():
     )
     print("Data preprocessing complete.\n")
 
-    # Debugging: Check the type and content of X_train and X_test
-    print(f"Type of X_train: {type(X_train)}")
-    print(f"First few entries in X_train: {X_train[:5]}")
-    print(f"Type of X_test: {type(X_test)}")
-    print(f"First few entries in X_test: {X_test[:5]}")
+    # Debugging: Check the type and size of X_train and y_train
+    print(f"Number of samples in X_train: {len(X_train)}")
+    print(f"Number of samples in y_train: {len(y_train)}")
 
-    # Ensure X_train and X_test are lists of strings
-    if not isinstance(X_train, list) or not all(isinstance(x, str) for x in X_train):
-        X_train = [str(x) for x in X_train]
-    if not isinstance(X_test, list) or not all(isinstance(x, str) for x in X_test):
-        X_test = [str(x) for x in X_test]
+    # Align the sizes of X_train and y_train
+    if len(X_train) != len(y_train):
+        min_samples = min(len(X_train), len(y_train))
+        X_train = X_train[:min_samples]
+        y_train = y_train[:min_samples]
 
-    print(f"Validated number of samples in X_train: {len(X_train)}\n")
+    print(f"Aligned number of samples in X_train: {len(X_train)}")
+    print(f"Aligned number of samples in y_train: {len(y_train)}\n")
 
     # Stage 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
@@ -44,7 +43,6 @@ def roberta():
     print("Step 4: Tokenizing the data...")
     train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
-    print("Data tokenization complete.\n")
 
     # Convert BatchEncoding to Keras-compatible dictionaries
     train_data = {
@@ -55,6 +53,11 @@ def roberta():
         "input_ids": test_encodings["input_ids"],
         "attention_mask": test_encodings["attention_mask"]
     }
+
+    # Debugging: Check sizes after tokenization
+    print(f"Number of samples in train_data['input_ids']: {train_data['input_ids'].shape[0]}")
+    print(f"Number of samples in y_train: {len(y_train)}")
+    print("Data tokenization complete.\n")
 
     # Stage 5: Train the model
     print("Step 5: Training the model...")
