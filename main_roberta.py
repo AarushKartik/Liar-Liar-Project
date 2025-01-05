@@ -1,6 +1,7 @@
 from src.download_data import download
 import tensorflow as tf
 
+import traceback
 
 # Roberta
 from src.preprocessing_roberta import process_data_pipeline_roberta
@@ -46,13 +47,22 @@ def roberta():
 
     # Step 5: Train the model
     print("Step 5: Training the model...")
-    model.fit(
-    x=train_data,
-    y=y_train,
-    validation_data=(test_data, y_test),
-    epochs=5,
-    batch_size=16,
-)
+    try:
+        model.fit(
+            x=train_data,
+            y=y_train,
+            validation_data=(test_data, y_test),
+            epochs=5,
+            batch_size=16,
+        )
+        print("Model training complete.\n")
+    except KeyboardInterrupt:
+        print("\nTraining interrupted (KeyboardInterrupt).")
+        traceback.print_exc()
+    except Exception as e:
+        print("An error occurred during model training:")
+        traceback.print_exc()
+        
     print("Model training complete.\n")
 
 if __name__ == '__main__':
