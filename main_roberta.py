@@ -20,18 +20,23 @@ def roberta():
     )
     print("Data preprocessing complete.\n")
 
-    # Debugging: Check the type and size of X_train and y_train
+    # Debugging: Check the content and size of X_train
+    print(f"X_train after preprocessing: {X_train[:5]}")
+    print(f"Type of each entry in X_train: {[type(x) for x in X_train[:5]]}")
     print(f"Number of samples in X_train: {len(X_train)}")
-    print(f"Number of samples in y_train: {len(y_train)}")
+    print(f"Number of samples in y_train: {len(y_train)}\n")
 
-    # Align the sizes of X_train and y_train
+    # Ensure X_train and y_train sizes are aligned
     if len(X_train) != len(y_train):
         min_samples = min(len(X_train), len(y_train))
         X_train = X_train[:min_samples]
         y_train = y_train[:min_samples]
 
-    print(f"Aligned number of samples in X_train: {len(X_train)}")
-    print(f"Aligned number of samples in y_train: {len(y_train)}\n")
+    # Ensure X_train is a list of strings
+    if not isinstance(X_train, list) or not all(isinstance(x, str) for x in X_train):
+        X_train = [str(x) for x in X_train]
+
+    print(f"Validated number of samples in X_train: {len(X_train)}\n")
 
     # Stage 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
@@ -43,6 +48,7 @@ def roberta():
     print("Step 4: Tokenizing the data...")
     train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
+    print("Data tokenization complete.\n")
 
     # Convert BatchEncoding to Keras-compatible dictionaries
     train_data = {
