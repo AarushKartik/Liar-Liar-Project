@@ -102,9 +102,9 @@ class BERTClassifier:
         # Set up the optimizer
         optimizer = AdamW(self.model.parameters(), lr=self.learning_rate)
 
-        # We do not have a built-in early stopping callback here, but you could implement it
-        # if desired. We do basic epoch training and track best val loss if needed.
-        
+        # Create weights directory if it doesn't exist
+        os.makedirs("weights", exist_ok=True)
+
         best_val_loss = float('inf')
         patience_counter = 0
         max_patience = 3  # Used to mimic early stopping
@@ -115,6 +115,8 @@ class BERTClassifier:
             # ---- Training ----
             self.model.train()
             total_train_loss = 0
+            all_train_preds = []
+            all_train_labels = []
 
             for batch in tqdm(train_loader, desc="Training"):
                 optimizer.zero_grad()
@@ -125,15 +127,26 @@ class BERTClassifier:
                 loss = outputs.loss
                 total_train_loss += loss.item()
 
+                logits = outputs.logits
+                preds = torch.argmax(logits, dim=-1)
+                all_train_preds.append(preds.cpu().numpy())
+                all_train_labels.append(labels.cpu().numpy())
+
                 loss.backward()
                 optimizer.step()
 
             avg_train_loss = total_train_loss / len(train_loader)
+            train_accuracy = accuracy_score(
+                np.concatenate(all_train_labels), np.concatenate(all_train_preds)
+            )
 
             # ---- Validation ----
             if val_loader:
                 self.model.eval()
                 total_val_loss = 0
+                all_val_preds = []
+                all_val_labels = []
+
                 with torch.no_grad():
                     for batch in tqdm(val_loader, desc="Validation"):
                         batch = [b.to(self.device) for b in batch]
@@ -143,22 +156,35 @@ class BERTClassifier:
                         loss = outputs.loss
                         total_val_loss += loss.item()
 
+                        logits = outputs.logits
+                        preds = torch.argmax(logits, dim=-1)
+                        all_val_preds.append(preds.cpu().numpy())
+                        all_val_labels.append(labels.cpu().numpy())
+
                 avg_val_loss = total_val_loss / len(val_loader)
-                print(f"Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+                val_accuracy = accuracy_score(
+                    np.concatenate(all_val_labels), np.concatenate(all_val_preds)
+                )
+                print(f"Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
+                print(f"Val Loss: {avg_val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}")
 
                 # Early stopping logic (optional)
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     patience_counter = 0
-                    # Save best model weights if desired
-                    # torch.save(self.model.state_dict(), 'best_model.pt')
                 else:
                     patience_counter += 1
                     if patience_counter >= max_patience:
                         print("Early stopping triggered.")
                         break
             else:
-                print(f"Train Loss: {avg_train_loss:.4f}")
+                print(f"Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
+
+            # ---- Save weights at the end of the epoch ----
+            save_path = f"weights/bert_epoch_{epoch+1}.pth"
+            torch.save(self.model.state_dict(), save_path)
+            print(f"Model weights saved to {save_path}")
+
 
     def predict(self, X):
         """
