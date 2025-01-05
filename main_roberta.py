@@ -8,43 +8,31 @@ from transformers import RobertaTokenizer
 def roberta():
     print("Starting the pipeline...")
 
-    # Stage 1: Download the Liar Dataset
+    # Step 1: Download the Liar Dataset
     print("Step 1: Downloading the dataset...")
     download()
     print("Dataset downloaded successfully.\n")
 
-    # Stage 2: Process the data
+    # Step 2: Preprocess the data
     print("Step 2: Preprocessing the data...")
     X_train, y_train, X_test, y_test, train_encodings, test_encodings = process_data_pipeline_roberta(
         'train.tsv', 'test.tsv', 'valid.tsv'
     )
     print("Data preprocessing complete.\n")
 
-    # Debugging: Check the content and size of X_train
-    print(f"X_train after preprocessing: {X_train[:5]}")
-    print(f"Type of each entry in X_train: {[type(x) for x in X_train[:5]]}")
-    print(f"Number of samples in X_train: {len(X_train)}")
-    print(f"Number of samples in y_train: {len(y_train)}\n")
+    # Debug: Ensure X_test is a list of strings
+    print(f"Type of X_test before tokenization: {type(X_test)}")
+    print(f"First few entries in X_test: {X_test[:5]}")
+    print(f"Number of samples in X_test: {len(X_test)}")
+    print(f"Number of samples in y_test: {len(y_test)}\n")
 
-    # Ensure X_train and y_train sizes are aligned
-    if len(X_train) != len(y_train):
-        min_samples = min(len(X_train), len(y_train))
-        X_train = X_train[:min_samples]
-        y_train = y_train[:min_samples]
-
-    # Ensure X_train is a list of strings
-    if not isinstance(X_train, list) or not all(isinstance(x, str) for x in X_train):
-        X_train = [str(x) for x in X_train]
-
-    print(f"Validated number of samples in X_train: {len(X_train)}\n")
-
-    # Stage 3: Initialize the model
+    # Step 3: Initialize the model
     print("Step 3: Building the RoBERTa model...")
     model = RoBERTaClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
     tokenizer = model.tokenizer  # Use the tokenizer from the model
     print("Model built successfully.\n")
 
-    # Stage 4: Tokenize and prepare the data for training
+    # Step 4: Tokenize and prepare the data
     print("Step 4: Tokenizing the data...")
     train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
@@ -60,12 +48,7 @@ def roberta():
         "attention_mask": test_encodings["attention_mask"]
     }
 
-    # Debugging: Check sizes after tokenization
-    print(f"Number of samples in train_data['input_ids']: {train_data['input_ids'].shape[0]}")
-    print(f"Number of samples in y_train: {len(y_train)}")
-    print("Data tokenization complete.\n")
-
-    # Stage 5: Train the model
+    # Step 5: Train the model
     print("Step 5: Training the model...")
     model.fit(train_data, y_train, X_val=test_data, y_val=y_test)
     print("Model training complete.\n")
