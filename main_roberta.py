@@ -46,10 +46,21 @@ def roberta():
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
     print("Data tokenization complete.\n")
 
+    # Convert BatchEncoding to Keras-compatible dictionaries
+    train_data = {
+        "input_ids": train_encodings["input_ids"],
+        "attention_mask": train_encodings["attention_mask"]
+    }
+    test_data = {
+        "input_ids": test_encodings["input_ids"],
+        "attention_mask": test_encodings["attention_mask"]
+    }
+
     # Stage 5: Train the model
     print("Step 5: Training the model...")
-    model.fit(train_encodings, y_train, X_val=test_encodings, y_val=y_test)
+    model.fit(train_data, y_train, X_val=test_data, y_val=y_test)
     print("Model training complete.\n")
 
 if __name__ == '__main__':
     roberta()
+
