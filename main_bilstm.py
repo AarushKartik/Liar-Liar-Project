@@ -29,7 +29,7 @@ def bilstm():
 
     # Stage 4: Train the model
     print("Step 4: Training the model...")
-    train_bilstm(model, X_train, X_test, y_train, y_test)
+    model.fit(model, X_train, X_test, y_train, y_test)
     print("Model training complete.\n")
 
 if __name__ == '__main__':
