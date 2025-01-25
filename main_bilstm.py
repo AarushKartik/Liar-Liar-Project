@@ -2,8 +2,7 @@ from src.download_data import download
 
 # BiLSTM
 from src.preprocessing_bilstm import process_data_pipeline_bilstm
-from src.bilstm_model import Bilstm
-from src.train_bilstm import train_bilstm
+from src.bilstm_model import BiLSTMClassifier
 
 def bilstm():
     print("Starting the pipeline...")
