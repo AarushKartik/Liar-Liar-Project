@@ -11,7 +11,7 @@ class BiLSTMClassifier:
     def __init__(self, 
                  num_classes=6, 
                  num_epochs=3,
-                 lstm_units=200
+                 lstm_units=200,
                  dropout_rate=0.1, 
                  learning_rate=2e-5,
                  max_len=128,  # Max sequence length for padding/truncating input sequences
