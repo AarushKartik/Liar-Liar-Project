@@ -99,5 +99,6 @@ def process_data_pipeline_bilstm(train_file, test_file, valid_file, batch_size=1
 
     print("Data preparation complete.")
     
-    return X_train, y_train, X_test, y_test, X_valid, y_valid
-
+    # Return the primary data (X_train, y_train, X_test, y_test)
+    # Validation data is returned as a separate tuple for optional use
+    return (X_train, y_train, X_test, y_test), (X_valid, y_valid)
