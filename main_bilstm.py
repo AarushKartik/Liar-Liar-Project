@@ -24,7 +24,7 @@ def bilstm():
 
     # Stage 3: Gather the model
     print("Step 3: Building the BiLSTM model...")
-    model = Bilstm(num_epochs=5, lstm_units=200, dropout_rate=0.2)
+    model = BiLSTMClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
     print("Model built successfully.\n")
 
     # Stage 4: Train the model
