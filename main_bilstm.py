@@ -13,9 +13,14 @@ def bilstm():
     print("Dataset downloaded successfully.\n")
 
     # Stage 2: Process the data
-    print("Step 2: Preprocessing the data...")
-    X_train, y_train, X_test, y_test = process_data_pipeline_bilstm('train.tsv', 'test.tsv', 'valid.tsv')
-    print("Data preprocessing complete.\n")
+    # Unpacking
+    data, val_data = process_data_pipeline_bilstm('train.tsv', 'test.tsv', 'valid.tsv')
+
+    # Unpack main data
+    X_train, y_train, X_test, y_test = data
+
+    # Unpack validation data if needed
+    X_valid, y_valid = val_data
 
     # Stage 3: Gather the model
     print("Step 3: Building the BiLSTM model...")
