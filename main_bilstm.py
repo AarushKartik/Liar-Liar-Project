@@ -13,9 +13,9 @@ def bilstm():
     print("Dataset downloaded successfully.\n")
 
     # Stage 2: Process the data
-    # Unpacking
-    data, val_data = process_data_pipeline_bilstm('train.tsv', 'test.tsv', 'valid.tsv')
-
+    print("Step 2: Processing the data...")
+    data, val_data, num_classes = process_data_pipeline_bilstm('train.tsv', 'test.tsv', 'valid.tsv')
+    
     # Unpack main data
     X_train, y_train, X_test, y_test = data
 
@@ -24,14 +24,13 @@ def bilstm():
 
     # Stage 3: Gather the model
     print("Step 3: Building the BiLSTM model...")
-    model = BiLSTMClassifier(num_epochs=5, lstm_units=200, dropout_rate=0.2)
+    model = BiLSTMClassifier(num_classes=num_classes, num_epochs=5, lstm_units=200, dropout_rate=0.2)
     print("Model built successfully.\n")
 
     # Stage 4: Train the model
     print("Step 4: Training the model...")
-    model.fit(model, X_train, X_test, y_train, y_test)
+    model.fit(X_train, y_train, X_val=X_valid, y_val=y_valid, batch_size=32)
     print("Model training complete.\n")
 
 if __name__ == '__main__':
-    
     bilstm()
