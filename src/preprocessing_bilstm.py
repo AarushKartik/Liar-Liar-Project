@@ -76,11 +76,6 @@ def process_data_pipeline_bilstm(train_file, test_file, valid_file, batch_size=1
     df_train = rename_columns(df_train)
     df_test = rename_columns(df_test)
     df_valid = rename_columns(df_valid)
-    
-    print("Computing statement lengths...")
-    df_train = compute_statement_length(df_train)
-    df_test = compute_statement_length(df_test)
-    df_valid = compute_statement_length(df_valid)
 
     print("Encoding labels...")
     df_train, num_classes = encode_labels(df_train, truthiness_rank)
