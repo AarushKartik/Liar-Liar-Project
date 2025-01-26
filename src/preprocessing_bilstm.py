@@ -32,15 +32,18 @@ def rename_columns(df):
     return df
 
 def encode_labels(df, truthiness_rank):
+    """
+    Encode the truthfulness labels into numeric values and return the DataFrame.
+    Also, return the number of unique classes.
+    """
     df['Label_Rank'] = df['Label'].map(truthiness_rank)
-    num_classes = len(df['Label_Rank'].unique())  # Calculate number of unique classes
+    
+    # Get the number of unique classes
+    num_classes = len(truthiness_rank)
+    
     return df, num_classes
 
 
-# Encode labels based on truthiness rank
-def encode_labels(df, truthiness_rank):
-    df['Label_Rank'] = df['Label'].map(truthiness_rank)
-    return df
 
 # Prepare training and test data for BiLSTM
 def prepare_data_for_bilstm(df_train, df_test, df_valid, tokenizer, max_length=256):
