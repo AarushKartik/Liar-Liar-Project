@@ -79,13 +79,12 @@ def process_data_pipeline_bilstm(train_file, test_file, valid_file, batch_size=1
     df_train = rename_columns(df_train)
     df_test = rename_columns(df_test)
     df_valid = rename_columns(df_valid)
+    
 
     print("Encoding labels...")
     df_train, num_classes = encode_labels(df_train, truthiness_rank)
-    df_test, _ = encode_labels(df_test, truthiness_rank)
-    df_valid, _ = encode_labels(df_valid, truthiness_rank)
-    
-    print(f"Number of classes: {num_classes}")
+    df_test = encode_labels(df_test, truthiness_rank)[0]  # Only need the DataFrame, not num_classes
+    df_valid = encode_labels(df_valid, truthiness_rank)[0]  # Only need the DataFrame, not num_classes
     
     print("Preparing data for BiLSTM model input...")
     
@@ -103,3 +102,4 @@ def process_data_pipeline_bilstm(train_file, test_file, valid_file, batch_size=1
     # Return the primary data (X_train, y_train, X_test, y_test)
     # Validation data is returned as a separate tuple for optional use
     return (X_train, y_train, X_test, y_test), (X_valid, y_valid), num_classes
+
