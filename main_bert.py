@@ -39,5 +39,8 @@ def bert():
     # Stage 6: Save the model
     classifier.save_model()
 
+    # Extract the feature Vectors - save them to feature_vectors/{train or test}/bert
+    classifier.extract_feature_vectors()
+
 if __name__ == '__main__':
     bert()
