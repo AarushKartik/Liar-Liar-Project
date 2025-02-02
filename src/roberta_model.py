@@ -3,11 +3,28 @@ from transformers import TFRobertaForSequenceClassification, RobertaConfig
 
 class RoBERTaClassifier:
     def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=2e-5):
+        # Ensure the model uses GPU if available
+        self.set_gpu_configuration()
+        
         self.num_classes = num_classes
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
         self.model = self.build_model()
+
+    def set_gpu_configuration(self):
+        # Check if a GPU is available
+        gpus = tf.config.list_physical_devices('GPU')
+        if gpus:
+            try:
+                # Set memory growth to avoid OOM errors
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                print(f"Using GPU: {gpus[0].name}")
+            except RuntimeError as e:
+                print(f"Failed to set GPU memory growth: {e}")
+        else:
+            print("No GPU found. Using CPU.")
 
     def build_model(self):
         # Load a RoBERTa configuration with the desired number of labels
@@ -35,7 +52,7 @@ class RoBERTaClassifier:
         )
         return model
 
-    def fit(self, x, y, validation_data=None, batch_size = 32, verbose =1, **kwargs):
+    def fit(self, x, y, validation_data=None, batch_size=32, verbose=1, **kwargs):
         """
         Fit the model to the training data.
         
@@ -54,7 +71,7 @@ class RoBERTaClassifier:
                 validation_data=(X_val, y_val),
                 epochs=self.num_epochs,
                 batch_size=batch_size,
-                verbose=1,
+                verbose=verbose,
                 **kwargs,
             )
         else:
@@ -63,8 +80,12 @@ class RoBERTaClassifier:
                 y=y,
                 epochs=self.num_epochs,
                 batch_size=batch_size,
-                verbose=1,
+                verbose=verbose,
                 **kwargs,
             )
 
         return history
+
+# Example GPU check
+if __name__ == "__main__":
+    classifier = RoBERTaClassifier()
