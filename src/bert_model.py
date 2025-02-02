@@ -1,5 +1,3 @@
-# src/bert_model.py (Now adapted for PyTorch)
-
 import torch
 import os
 import numpy as np
@@ -18,15 +16,6 @@ class BERTClassifier:
                  model_save_dir='weights/bert',
                  batch_size=8,
                  device=None):
-        """
-        num_classes: Number of classification labels
-        num_epochs: How many epochs to train
-        dropout_rate: Not directly used here since BertForSequenceClassification has its own dropout
-        learning_rate: Learning rate for the AdamW optimizer
-        model_save_dir: Directory to save the trained BERT model
-        batch_size: Batch size for DataLoader
-        device: Torch device (e.g. 'cuda' or 'cpu'). If None, we detect automatically.
-        """
         self.num_classes = num_classes
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
@@ -45,34 +34,22 @@ class BERTClassifier:
         self.model.to(self.device)
 
     def build_model(self):
-        """
-        Builds a BertForSequenceClassification model for multi-class classification.
-        """
-        # Load a BERT configuration with the desired number of labels
         config = BertConfig.from_pretrained("bert-base-uncased", num_labels=self.num_classes)
-        # Initialize the BertForSequenceClassification model
         model = BertForSequenceClassification.from_pretrained("bert-base-uncased", config=config)
         return model
 
     def _create_dataloader(self, X, y=None, shuffle=False):
-        """
-        Creates a DataLoader from input_ids, attention_mask, and optional labels.
-        X should be a tuple or dict containing 'input_ids' and 'attention_mask'.
-        y can be one-hot or integer. We'll store integer labels for PyTorch classification.
-        """
         if isinstance(X, dict):
             input_ids = X['input_ids']
             attention_mask = X['attention_mask']
         else:
-            # Assume X is a tuple (input_ids, attention_mask)
             input_ids, attention_mask = X
 
-        # Convert numpy arrays to torch tensors
         input_ids = torch.tensor(input_ids, dtype=torch.long)
         attention_mask = torch.tensor(attention_mask, dtype=torch.long)
 
         if y is not None:
-            # If y is one-hot, convert to integer
+            # Convert one-hot to integer label if needed
             if len(y.shape) > 1 and y.shape[1] > 1:
                 y = np.argmax(y, axis=-1)
             y = torch.tensor(y, dtype=torch.long)
@@ -83,31 +60,17 @@ class BERTClassifier:
         return DataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle)
 
     def fit(self, X_train, y_train, X_val=None, y_val=None):
-        """
-        Trains the BERT classifier using a manual training loop.
-        
-        X_train, y_train: 
-            - X_train -> a dict or tuple (input_ids, attention_mask)
-            - y_train -> one-hot or integer labels
-
-        X_val, y_val: Same format for validation (optional).
-        """
         train_loader = self._create_dataloader(X_train, y_train, shuffle=True)
-
+        val_loader = None
         if X_val is not None and y_val is not None:
             val_loader = self._create_dataloader(X_val, y_val, shuffle=False)
-        else:
-            val_loader = None
 
-        # Set up the optimizer
         optimizer = AdamW(self.model.parameters(), lr=self.learning_rate)
-
-        # Create weights directory if it doesn't exist
         os.makedirs("weights", exist_ok=True)
 
         best_val_loss = float('inf')
         patience_counter = 0
-        max_patience = 3  # Used to mimic early stopping
+        max_patience = 3
 
         for epoch in range(self.num_epochs):
             print(f"Epoch {epoch+1}/{self.num_epochs}")
@@ -126,8 +89,8 @@ class BERTClassifier:
                 outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
                 loss = outputs.loss
                 total_train_loss += loss.item()
-
                 logits = outputs.logits
+
                 preds = torch.argmax(logits, dim=-1)
                 all_train_preds.append(preds.cpu().numpy())
                 all_train_labels.append(labels.cpu().numpy())
@@ -168,7 +131,7 @@ class BERTClassifier:
                 print(f"Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
                 print(f"Val Loss: {avg_val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}")
 
-                # Early stopping logic (optional)
+                # Early stopping check
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
                     patience_counter = 0
@@ -180,17 +143,12 @@ class BERTClassifier:
             else:
                 print(f"Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
 
-            # ---- Save weights at the end of the epoch ----
+            # ---- Save checkpoint ----
             save_path = f"weights/bert_epoch_{epoch+1}.pth"
             torch.save(self.model.state_dict(), save_path)
             print(f"Model weights saved to {save_path}")
 
-
     def predict(self, X):
-        """
-        Generates class predictions from the BERT model.
-        X should be a dict or tuple with 'input_ids' and 'attention_mask'.
-        """
         self.model.eval()
         data_loader = self._create_dataloader(X, y=None, shuffle=False)
         all_preds = []
@@ -208,9 +166,6 @@ class BERTClassifier:
         return np.concatenate(all_preds, axis=0)
 
     def predict_proba(self, X):
-        """
-        Returns the predicted probabilities for each class.
-        """
         self.model.eval()
         data_loader = self._create_dataloader(X, y=None, shuffle=False)
         all_probs = []
@@ -228,10 +183,6 @@ class BERTClassifier:
         return np.concatenate(all_probs, axis=0)
 
     def score(self, X, y):
-        """
-        Computes the accuracy score, assuming y is one-hot or integer indices.
-        """
-        # Convert y to class indices if one-hot
         if len(y.shape) > 1 and y.shape[1] > 1:
             y_true = np.argmax(y, axis=-1)
         else:
@@ -241,9 +192,6 @@ class BERTClassifier:
         return accuracy_score(y_true, y_pred)
 
     def evaluate(self, X, y):
-        """
-        Prints and returns accuracy, confusion matrix, and classification report.
-        """
         if len(y.shape) > 1 and y.shape[1] > 1:
             y_true = np.argmax(y, axis=-1)
         else:
@@ -263,23 +211,65 @@ class BERTClassifier:
         return accuracy, confusion, classification_rep
 
     def save_model(self, save_dir=None):
-        """
-        Saves the trained model weights to the specified directory (default: weights/bert).
-        """
         if save_dir is None:
             save_dir = self.model_save_dir
 
-        # Create directory if it doesn't exist
         os.makedirs(save_dir, exist_ok=True)
-        # Save the entire model (config + weights) in Transformers format
         self.model.save_pretrained(save_dir)
         print(f"Model saved to {save_dir}")
+
+    def get_features(self, X):
+        """
+        Returns the [CLS] embedding from the last hidden layer (or whichever layer you prefer).
+        """
+        self.model.eval()
+        data_loader = self._create_dataloader(X, y=None, shuffle=False)
+        all_features = []
+
+        with torch.no_grad():
+            for batch in data_loader:
+                batch = [b.to(self.device) for b in batch]
+                input_ids, attention_mask = batch
+
+                # Forward pass through only the BERT encoder part
+                outputs = self.model.bert(
+                    input_ids, 
+                    attention_mask=attention_mask, 
+                    output_hidden_states=True, 
+                    return_dict=True
+                )
+                # outputs.hidden_states is a tuple of [embeddings, hidden_layer_1, ..., hidden_layer_12]
+                # So the last item is the final hidden layer
+                last_hidden_state = outputs.hidden_states[-1]  # (batch_size, seq_len, hidden_dim)
+
+                # Typically the [CLS] token embedding is at index 0
+                cls_embeddings = last_hidden_state[:, 0, :]    # (batch_size, hidden_dim)
+
+                all_features.append(cls_embeddings.cpu().numpy())
+
+        # Concatenate all batch outputs
+        all_features = np.concatenate(all_features, axis=0)
+        return all_features
+
+    def extract_feature_vectors(self, X, split_name="train"):
+        """
+        Convenience method:
+        1. Gets the features for the given split
+        2. Saves them to feature_vectors/<split_name>/bert/features.npy
+        """
+        features = self.get_features(X)
+
+        out_dir = f"feature_vectors/{split_name}/bert"
+        os.makedirs(out_dir, exist_ok=True)
+
+        np.save(os.path.join(out_dir, "features.npy"), features)
+        print(f"[{split_name.upper()}] Feature vectors saved to: {out_dir}/features.npy")
 
     def __getattr__(self, name):
         """
         Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
         """
-        if name not in ['predict', 'predict_proba']:
+        if name not in ['predict', 'predict_proba', 'get_features', 'extract_feature_vectors']:
             return getattr(self.model, name)
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
