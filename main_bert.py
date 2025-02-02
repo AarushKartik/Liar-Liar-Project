@@ -1,5 +1,3 @@
-# main_bert.py (Now adapted for PyTorch)
-
 from src.download_data import download
 
 # BERT
@@ -39,8 +37,11 @@ def bert():
     # Stage 6: Save the model
     classifier.save_model()
 
-    # Extract the feature Vectors - save them to feature_vectors/{train or test}/bert
-    classifier.extract_feature_vectors()
+    # Stage 7: Extract the feature vectors for each split
+    print("Step 7: Extracting and saving feature vectors...")
+    classifier.extract_feature_vectors(X_train, split_name="train")
+    classifier.extract_feature_vectors(X_valid, split_name="valid")
+    classifier.extract_feature_vectors(X_test,  split_name="test")
 
 if __name__ == '__main__':
     bert()
