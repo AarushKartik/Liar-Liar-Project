@@ -33,13 +33,6 @@ def bilstm():
     model.fit(X_train, y_train, X_val=X_valid, y_val=y_valid, batch_size=32)
     print("Model training complete.\n")
 
-    # Stage 5: Save the model weights
-    print("Step 5: Saving the model weights...")
-    weights_dir = "bilstm_weights"
-    os.makedirs(weights_dir, exist_ok=True)  # Ensure directory exists
-    weights_path = os.path.join(weights_dir, "bilstm_model_weights.h5")
-    model.save_weights(weights_path)
-    print(f"Model weights saved at {weights_path}\n")
 
 if __name__ == '__main__':
     bilstm()
