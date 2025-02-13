@@ -102,9 +102,9 @@ class BiLSTMClassifier:
         elif isinstance(texts, list):
             texts = [str(text) for text in texts]  # Convert all items to strings
 
-    sequences = self.tokenizer.texts_to_sequences(texts)
-    padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
-    return padded_sequences
+        sequences = self.tokenizer.texts_to_sequences(texts)
+        padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
+        return padded_sequences
 
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
