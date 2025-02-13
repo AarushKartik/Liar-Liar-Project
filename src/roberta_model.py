@@ -1,5 +1,5 @@
 import tensorflow as tf
-from transformers import TFRobertaForSequenceClassification, RobertaConfig
+from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 
 class RoBERTaClassifier:
     def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=2e-5):
@@ -11,6 +11,7 @@ class RoBERTaClassifier:
         self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
         self.model = self.build_model()
+        self.feature_extractor = self.build_feature_extractor()
 
     def set_gpu_configuration(self):
         # Check if a GPU is available
@@ -52,6 +53,38 @@ class RoBERTaClassifier:
         )
         return model
 
+    def build_feature_extractor(self):
+        # Load the base RoBERTa model without classification head
+        roberta_model = TFRobertaModel.from_pretrained("roberta-base")
+
+        # Define inputs
+        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
+        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
+
+        # Extract hidden states
+        outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
+        hidden_states = outputs.last_hidden_state  # Shape: (batch_size, sequence_length, hidden_dim)
+
+        # Apply pooling to get a fixed-size feature vector (CLS token)
+        cls_embedding = hidden_states[:, 0, :]  # CLS token representation
+
+        # Create the feature extraction model
+        feature_extractor = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=cls_embedding)
+
+        return feature_extractor
+
+    def extract_features(self, x):
+        """
+        Extract feature vectors from the model.
+
+        Args:
+            x: Input dictionary with keys 'input_ids' and 'attention_mask'.
+
+        Returns:
+            Feature vectors (numpy array) of shape (batch_size, hidden_dim).
+        """
+        return self.feature_extractor.predict(x)
+
     def fit(self, x, y, validation_data=None, batch_size=32, verbose=1, **kwargs):
         """
         Fit the model to the training data.
@@ -86,6 +119,13 @@ class RoBERTaClassifier:
 
         return history
 
-# Example GPU check
+# Example Usage
 if __name__ == "__main__":
     classifier = RoBERTaClassifier()
+    # Example input (replace with real tokenized input)
+    sample_input = {
+        "input_ids": tf.random.uniform((1, 512), minval=0, maxval=100, dtype=tf.int32),
+        "attention_mask": tf.ones((1, 512), dtype=tf.int32),
+    }
+    feature_vectors = classifier.extract_features(sample_input)
+    print("Extracted feature vector shape:", feature_vectors.shape)
