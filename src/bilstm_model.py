@@ -1,7 +1,22 @@
+# TensorFlow and Keras Imports
+import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, GlobalAveragePooling1D, Dropout, Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import EarlyStopping
+
+# Sklearn Imports for Model Evaluation
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Google Drive Integration for Saving Model Weights
 from google.colab import drive
+
+# OS and File Handling
+import os
+import shutil
 
 class BiLSTMClassifier:
     def __init__(self, 
