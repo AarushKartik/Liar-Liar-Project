@@ -202,7 +202,8 @@ class BiLSTMClassifier:
         # Save the entire model (architecture + weights) in Keras format
         self.model.save(os.path.join(save_dir, 'bilstm_model.h5'))
         print(f"Model saved to {save_dir}")
-     def save_model_weights(self):
+     
+    def save_model_weights(self):
         weights_path = os.path.join(self.model_save_dir, "bilstm_weights.h5")
         zip_path = os.path.join(self.model_save_dir, "weights.zip")
         
