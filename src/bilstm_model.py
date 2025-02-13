@@ -42,7 +42,7 @@ class BiLSTMClassifier:
         """
         Builds and compiles a BiLSTM-based classification model.
         """
-
+        model = Sequential()
         # Embedding layer
         model.add(Embedding(input_dim=self.vocab_size, output_dim=self.embedding_dim, input_length=self.max_len))
 
