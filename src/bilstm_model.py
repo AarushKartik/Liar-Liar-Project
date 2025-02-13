@@ -1,11 +1,5 @@
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Bidirectional, Dense, Dropout, GlobalAveragePooling1D
-from tensorflow.keras.utils import to_categorical
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-import tensorflow as tf
-import os
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 class BiLSTMClassifier:
     def __init__(self, 
@@ -16,6 +10,7 @@ class BiLSTMClassifier:
                  learning_rate=2e-5,
                  max_len=128,  # Max sequence length for padding/truncating input sequences
                  embedding_dim=100,  # Dimensionality of the word embeddings
+                 vocab_size=5000,  # Vocabulary size for tokenization
                  model_save_dir='weights/bilstm'):
         """
         num_classes: Number of classification labels
@@ -24,6 +19,7 @@ class BiLSTMClassifier:
         learning_rate: Learning rate for the Adam optimizer
         max_len: Maximum length for padding/truncating input sequences
         embedding_dim: Embedding dimension for the input
+        vocab_size: Maximum vocabulary size for tokenization
         model_save_dir: Directory to save the trained BiLSTM model weights
         """
         self.num_classes = num_classes
@@ -32,7 +28,11 @@ class BiLSTMClassifier:
         self.learning_rate = learning_rate
         self.max_len = max_len
         self.embedding_dim = embedding_dim
+        self.vocab_size = vocab_size
         self.model_save_dir = model_save_dir
+
+        # Initialize tokenizer
+        self.tokenizer = Tokenizer(num_words=self.vocab_size, oov_token="<OOV>")
 
         # Build the BiLSTM-based classification model
         self.model = self.build_model()
@@ -44,7 +44,7 @@ class BiLSTMClassifier:
         model = Sequential()
 
         # Embedding layer
-        model.add(Embedding(input_dim=5000, output_dim=self.embedding_dim, input_length=self.max_len))
+        model.add(Embedding(input_dim=self.vocab_size, output_dim=self.embedding_dim, input_length=self.max_len))
 
         # BiLSTM layer
         model.add(Bidirectional(LSTM(64, return_sequences=True)))
@@ -65,16 +65,41 @@ class BiLSTMClassifier:
         )
         return model
 
+    def fit_tokenizer(self, texts):
+        """
+        Fits the tokenizer on the given text data.
+        texts: List of text samples for training the tokenizer.
+        """
+        self.tokenizer.fit_on_texts(texts)
+
+    def extract_features(self, texts):
+        """
+        Tokenizes and pads text sequences.
+        
+        texts: List of input text samples.
+
+        Returns:
+            Padded sequences ready for input to the BiLSTM model.
+        """
+        sequences = self.tokenizer.texts_to_sequences(texts)
+        padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
+        return padded_sequences
+
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
         """
         Trains the BiLSTM classifier. 
         
         X_train, y_train: 
-            X_train -> Input sequences (padded)
+            X_train -> Input text sequences (pre-tokenized)
             y_train -> One-hot or integer labels (depending on your setup)
 
         X_val, y_val: Same format for validation set (optional).
         """
+        # Convert text to padded sequences
+        X_train = self.extract_features(X_train)
+        if X_val is not None:
+            X_val = self.extract_features(X_val)
+
         # Convert y_train and y_val to one-hot encoding if they are integers
         if len(y_train.shape) == 1 or y_train.shape[1] != self.num_classes:
             y_train = to_categorical(y_train, num_classes=self.num_classes)
@@ -116,8 +141,9 @@ class BiLSTMClassifier:
     def predict(self, X, **kwargs):
         """
         Generates class predictions from the BiLSTM model. 
-        X should be padded input sequences.
+        X should be raw text sequences.
         """
+        X = self.extract_features(X)  # Convert text to tokenized sequences
         y_pred = self.model.predict(X, **kwargs)
         return y_pred.argmax(axis=-1)  # Return predicted class indices
 
@@ -125,6 +151,7 @@ class BiLSTMClassifier:
         """
         Returns the predicted probabilities for each class.
         """
+        X = self.extract_features(X)  # Convert text to tokenized sequences
         y_pred = self.model.predict(X, **kwargs)
         return y_pred  # Output softmax probabilities
 
@@ -183,4 +210,3 @@ class BiLSTMClassifier:
             return getattr(self.model, name)
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
