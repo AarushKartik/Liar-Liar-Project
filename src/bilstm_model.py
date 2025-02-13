@@ -1,5 +1,6 @@
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from google.colab import drive
 
 class BiLSTMClassifier:
     def __init__(self, 
@@ -201,6 +202,15 @@ class BiLSTMClassifier:
         # Save the entire model (architecture + weights) in Keras format
         self.model.save(os.path.join(save_dir, 'bilstm_model.h5'))
         print(f"Model saved to {save_dir}")
+     def save_model_weights(self):
+        weights_path = os.path.join(self.model_save_dir, "bilstm_weights.h5")
+        zip_path = os.path.join(self.model_save_dir, "weights.zip")
+        
+        self.model.save_weights(weights_path)
+        print(f"Model weights saved to: {weights_path}")
+        
+        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', self.model_save_dir)
+        print(f"Model weights zipped and saved to: {zip_path}")
 
     def __getattr__(self, name):
         """
