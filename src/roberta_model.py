@@ -1,10 +1,8 @@
-import numpy as np  # Add this import
+import numpy as np
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 import os
 import shutil
-from tensorflow.keras.mixed_precision import set_global_policy
-set_global_policy('mixed_float16')
 
 class RoBERTaClassifier:
     def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=2e-5):
@@ -57,8 +55,10 @@ class RoBERTaClassifier:
 
         input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
         attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
-        outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
-        
+
+        # Wrap the Hugging Face model call in a Lambda layer
+        outputs = tf.keras.layers.Lambda(lambda x: roberta_model(input_ids=x[0], attention_mask=x[1]))([input_ids, attention_mask])
+
         model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=outputs.logits)
         optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate, jit_compile=False)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
