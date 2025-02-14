@@ -3,6 +3,8 @@ import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 import os
 import shutil
+from tensorflow.keras.mixed_precision import set_global_policy
+set_global_policy('mixed_float16')
 
 class RoBERTaClassifier:
     def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=2e-5):
