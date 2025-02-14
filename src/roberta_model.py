@@ -1,6 +1,5 @@
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
-from google.colab import drive
 import os
 import shutil
 
@@ -16,7 +15,7 @@ class RoBERTaClassifier:
         self.model = self.build_model()
         self.feature_extractor = self.build_feature_extractor()
         
-        # Mount Google Drive and set the save path
+        # Mount Google Drive and set the save path only if running in Colab
         self.save_path = self.setup_drive()
 
     def set_gpu_configuration(self):
@@ -35,11 +34,19 @@ class RoBERTaClassifier:
         import sys
         if 'google.colab' in sys.modules:
             from google.colab import drive
-            drive.mount('/content/drive')
+            try:
+                drive.mount('/content/drive', force_remount=True)
+            except Exception as e:
+                print(f"Failed to mount Google Drive: {e}")
+                return "/content"
 
-        save_dir = "/content/drive/My Drive/weights"
-        os.makedirs(save_dir, exist_ok=True)
-        return save_dir
+            save_dir = "/content/drive/My Drive/weights"
+            os.makedirs(save_dir, exist_ok=True)
+            return save_dir
+        else:
+            save_dir = "./weights"
+            os.makedirs(save_dir, exist_ok=True)
+            return save_dir
 
     def build_model(self):
         config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
