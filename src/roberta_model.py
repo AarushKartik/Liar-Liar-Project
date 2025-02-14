@@ -32,7 +32,11 @@ class RoBERTaClassifier:
             print("No GPU found. Using CPU.")
     
     def setup_drive(self):
-        drive.mount('/content/drive')
+        import sys
+        if 'google.colab' in sys.modules:
+            from google.colab import drive
+                drive.mount('/content/drive')
+
         save_dir = "/content/drive/My Drive/weights"
         os.makedirs(save_dir, exist_ok=True)
         return save_dir
