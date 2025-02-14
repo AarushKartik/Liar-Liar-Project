@@ -1,3 +1,4 @@
+import numpy as np  # Add this import
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 import os
