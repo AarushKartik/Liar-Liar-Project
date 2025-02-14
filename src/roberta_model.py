@@ -57,7 +57,7 @@ class RoBERTaClassifier:
         outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
         
         model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=outputs.logits)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate, jit_compile=False)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
         return model
 
@@ -75,6 +75,7 @@ class RoBERTaClassifier:
 
     def fit(self, x, y, validation_data=None, batch_size=32, verbose=1, **kwargs):
         kwargs.pop("epochs", None)
+        tf.keras.backend.clear_session()  # Clear previous models to free memory
         history = self.model.fit(
             x=x,
             y=y,
