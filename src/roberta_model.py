@@ -5,7 +5,7 @@ import os
 import shutil
 
 class RoBERTaClassifier:
-    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1, learning_rate=3e-4):
+    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=5e-5):
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
