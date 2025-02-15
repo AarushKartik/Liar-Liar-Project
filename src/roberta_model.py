@@ -5,11 +5,12 @@ import os
 import shutil
 
 class RoBERTaClassifier:
-    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=5e-5):
+    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.2, learning_rate=5e-5, batch_size = 8):
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
         self.num_classes = num_classes
+        self.batch_size = batch_size
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
