@@ -3,9 +3,10 @@ import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 import os
 import shutil
+import optuna
 
 class RoBERTaClassifier:
-    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1, learning_rate=5e-5, batch_size = 8):
+    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1, learning_rate=5e-5, batch_size=8):
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
@@ -105,6 +106,45 @@ class RoBERTaClassifier:
         # Zip the weights file
         shutil.make_archive(weights_path.replace('.h5', ''), 'zip', self.save_path)
         print(f"Model weights zipped and saved to: {zip_path}")
+
+# Optuna Objective Function
+def objective(trial):
+    # Define hyperparameters to optimize
+    learning_rate = trial.suggest_float("learning_rate", 1e-5, 5e-4, log=True)
+    dropout_rate = trial.suggest_float("dropout_rate", 0.1, 0.5)
+    batch_size = trial.suggest_categorical("batch_size", [8, 16, 32])
+    num_epochs = trial.suggest_int("num_epochs", 2, 5)
+
+    # Initialize the model with suggested hyperparameters
+    classifier = RoBERTaClassifier(
+        num_classes=6,
+        num_epochs=num_epochs,
+        dropout_rate=dropout_rate,
+        learning_rate=learning_rate,
+        batch_size=batch_size,
+    )
+
+    # Dummy data for demonstration
+    x = {
+        "input_ids": tf.random.uniform((100, 512), minval=0, maxval=100, dtype=tf.int32),
+        "attention_mask": tf.ones((100, 512), dtype=tf.int32),
+    }
+    y = tf.random.uniform((100,), minval=0, maxval=6, dtype=tf.int32)
+
+    # Train the model
+    history = classifier.fit(x, y, validation_data=(x, y), batch_size=batch_size, verbose=0)
+
+    # Return the validation accuracy as the objective value
+    return history.history["val_accuracy"][-1]
+
+# Optuna Study
+study = optuna.create_study(direction="maximize")
+study.optimize(objective, n_trials=10)  # Adjust n_trials as needed
+
+# Print the best trial results
+trial = study.best_trial
+print("Best validation accuracy: {}".format(trial.value))
+print("Best hyperparameters: {}".format(trial.params))
 
 # Example Usage
 if __name__ == "__main__":
