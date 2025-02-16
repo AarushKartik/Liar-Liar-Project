@@ -6,7 +6,7 @@ import shutil
 import optuna
 
 class RoBERTaClassifier:
-    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1, learning_rate=5e-5, batch_size=8):
+    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.881654296425044e-05, batch_size=16):
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
@@ -137,14 +137,6 @@ def objective(trial):
     # Return the validation accuracy as the objective value
     return history.history["val_accuracy"][-1]
 
-# Optuna Study
-study = optuna.create_study(direction="maximize")
-study.optimize(objective, n_trials=10)  # Adjust n_trials as needed
-
-# Print the best trial results
-trial = study.best_trial
-print("Best validation accuracy: {}".format(trial.value))
-print("Best hyperparameters: {}".format(trial.params))
 
 # Example Usage
 if __name__ == "__main__":
