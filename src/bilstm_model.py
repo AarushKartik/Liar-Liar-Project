@@ -1,4 +1,3 @@
-# TensorFlow and Keras Imports
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -6,17 +5,23 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, GlobalAveragePooling1D, Dropout, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, Callback
 
-# Sklearn Imports for Model Evaluation
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-# Google Drive Integration for Saving Model Weights
-from google.colab import drive
-
-# OS and File Handling
 import os
 import shutil
+
+class SaveModelWeightsCallback(Callback):
+    def __init__(self, model_save_dir, model_name):
+        super(SaveModelWeightsCallback, self).__init__()
+        self.model_save_dir = model_save_dir
+        self.model_name = model_name
+
+    def on_epoch_end(self, epoch, logs=None):
+        weights_path = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.pth')
+        self.model.save_weights(weights_path)
+        print(f"Model weights saved to: {weights_path}")
 
 class BiLSTMClassifier:
     def __init__(self, 
@@ -28,7 +33,8 @@ class BiLSTMClassifier:
                  max_len=128,  # Max sequence length for padding/truncating input sequences
                  embedding_dim=100,  # Dimensionality of the word embeddings
                  vocab_size=5000,  # Vocabulary size for tokenization
-                 model_save_dir='weights/bilstm'):
+                 model_save_dir='weights/bilstm',
+                 model_name='bilstm'):
         """
         num_classes: Number of classification labels
         num_epochs: How many epochs to train
@@ -38,6 +44,7 @@ class BiLSTMClassifier:
         embedding_dim: Embedding dimension for the input
         vocab_size: Maximum vocabulary size for tokenization
         model_save_dir: Directory to save the trained BiLSTM model weights
+        model_name: Name of the model for saving weights
         """
         self.num_classes = num_classes
         self.num_epochs = num_epochs
@@ -47,6 +54,7 @@ class BiLSTMClassifier:
         self.embedding_dim = embedding_dim
         self.vocab_size = vocab_size
         self.model_save_dir = model_save_dir
+        self.model_name = model_name
 
         # Initialize tokenizer
         self.tokenizer = Tokenizer(num_words=self.vocab_size, oov_token="<OOV>")
@@ -106,7 +114,6 @@ class BiLSTMClassifier:
         padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
         return padded_sequences
 
-
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
         """
         Trains the BiLSTM classifier. 
@@ -137,26 +144,21 @@ class BiLSTMClassifier:
                 restore_best_weights=True
             )
             callbacks.append(early_stopping)
-            history = self.model.fit(
-                X_train,
-                y_train,
-                epochs=self.num_epochs,
-                validation_data=(X_val, y_val),
-                callbacks=callbacks,
-                batch_size=batch_size,  # Can be adjusted for BiLSTM models
-                verbose=1,
-                **kwargs
-            )
-        else:
-            history = self.model.fit(
-                X_train,
-                y_train,
-                epochs=self.num_epochs,
-                batch_size=batch_size,
-                verbose=1,
-                callbacks=callbacks,
-                **kwargs
-            )
+
+        # Add the custom callback to save model weights
+        save_weights_callback = SaveModelWeightsCallback(self.model_save_dir, self.model_name)
+        callbacks.append(save_weights_callback)
+
+        history = self.model.fit(
+            X_train,
+            y_train,
+            epochs=self.num_epochs,
+            validation_data=(X_val, y_val),
+            callbacks=callbacks,
+            batch_size=batch_size,  # Can be adjusted for BiLSTM models
+            verbose=1,
+            **kwargs
+        )
         
         return history
 
