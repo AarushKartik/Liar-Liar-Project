@@ -111,11 +111,25 @@ class BiLSTMClassifier:
         elif isinstance(texts, list):
             texts = [str(text) for text in texts]  # Convert all items to strings
 
+        # Debug: Print the first few texts
+        print("Sample texts:", texts[:5])
+
         # Tokenize the texts
         sequences = self.tokenizer.texts_to_sequences(texts)
 
+        # Debug: Print the first few sequences
+        print("Sample sequences:", sequences[:5])
+
         # Filter out None or empty sequences
         sequences = [seq for seq in sequences if seq]  # Remove empty sequences
+
+        # Debug: Print the number of non-empty sequences
+        print(f"Number of non-empty sequences: {len(sequences)}")
+
+        # If all sequences are empty, return an empty array with the correct shape
+        if not sequences:
+            print("Warning: All sequences are empty. Returning an empty array.")
+            return np.zeros((0, self.max_len))
 
         # Pad sequences
         padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
