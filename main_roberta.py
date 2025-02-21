@@ -30,6 +30,36 @@ class SaveWeightsCallback(tf.keras.callbacks.Callback):
             print(f"Saved weights at batch {batch} to {weight_path}.")
             upload_to_drive(weight_path, self.drive_folder_name)
 
+class SaveEpochWeightsCallback(tf.keras.callbacks.Callback):
+    def __init__(self, save_dir):
+        super().__init__()
+        self.save_dir = save_dir
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        epoch_num = epoch + 1
+        # Define file paths using the epoch number
+        weight_path = os.path.join(self.save_dir, f"roberta_epoch_{epoch_num}.h5")
+        txt_path = os.path.join(self.save_dir, f"roberta_epoch_{epoch_num}.txt")
+        
+        # Save the model weights
+        self.model.save_weights(weight_path)
+        print(f"Saved weights for epoch {epoch_num} to {weight_path}.")
+        
+        # Write the training and validation accuracies into a text file
+        with open(txt_path, "w") as f:
+            train_acc = logs.get("accuracy", None)
+            val_acc = logs.get("val_accuracy", None)
+            if train_acc is not None:
+                f.write(f"Train Accuracy: {train_acc:.4f}\n")
+            else:
+                f.write("Train Accuracy: N/A\n")
+            if val_acc is not None:
+                f.write(f"Val Accuracy: {val_acc:.4f}\n")
+            else:
+                f.write("Val Accuracy: N/A\n")
+        print(f"Saved accuracies for epoch {epoch_num} to {txt_path}.")
+        # upload_to_drive(weight_path, self.drive_folder_name)
 
 def upload_to_drive(local_path, drive_folder_name):
     """
@@ -71,7 +101,7 @@ def upload_to_drive(local_path, drive_folder_name):
 def roberta():
     print("Starting the pipeline...")
 
-    # Step 1: Download the Liar Dataset
+    # Step 1: Download the dataset
     print("Step 1: Downloading the dataset...")
     download()
     print("Dataset downloaded successfully.\n")
@@ -98,37 +128,32 @@ def roberta():
         "input_ids": test_encodings["input_ids"],
         "attention_mask": test_encodings["attention_mask"]
     }
-    
     print("Data preparation complete.\n")
     y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
     y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
 
-    # Step 5: Train the model with the custom callback
+    # Step 5: Train the model with the new callback
     print("Step 5: Training the model...")
     try:
         save_dir = "./saved_weights"
         os.makedirs(save_dir, exist_ok=True)
         
-        callback = SaveWeightsCallback(
-            save_interval=5,
-            model=model,
-            save_dir=save_dir,
-            drive_folder_name="weights"
-        )
-
+        # Create our custom callback that saves weights and accuracies each epoch
+        epoch_callback = SaveEpochWeightsCallback(save_dir=save_dir)
+        
         model.fit(
             x=train_data,
             y=y_train,
             validation_data=(test_data, y_test),
             epochs=2,
             batch_size=2,
-            callbacks=[callback]
+            callbacks=[epoch_callback]
         )
         print("Model training complete.\n")
     except Exception as e:
         print("An error occurred during model training:")
+        import traceback
         traceback.print_exc()
-
 
 if __name__ == '__main__':
     roberta()
