@@ -98,14 +98,14 @@ class BiLSTMClassifier:
         self.tokenizer.fit_on_texts(texts)
 
     def extract_features(self, texts):
-    """
-    Tokenizes and pads text sequences.
+        """
+        Tokenizes and pads text sequences.
 
-    texts: List of input text samples.
+        texts: List of input text samples.
 
-    Returns:
-    Padded sequences ready for input to the BiLSTM model.
-    """
+        Returns:
+        Padded sequences ready for input to the BiLSTM model.
+        """
         if isinstance(texts, np.ndarray):
             texts = texts.astype(str).tolist()  # Ensure it's a list of strings
         elif isinstance(texts, list):
