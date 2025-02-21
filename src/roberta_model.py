@@ -3,7 +3,6 @@ import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 import os
 import shutil
-import optuna
 
 class RoBERTaClassifier:
     def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.85e-05, batch_size=16):
