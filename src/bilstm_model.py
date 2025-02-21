@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, GlobalAveragePooling1D, Dropout, Dense
@@ -36,17 +35,6 @@ class BiLSTMClassifier:
                  vocab_size=5000,  # Vocabulary size for tokenization
                  model_save_dir='weights/bilstm',
                  model_name='bilstm'):
-        """
-        num_classes: Number of classification labels
-        num_epochs: How many epochs to train
-        dropout_rate: Dropout rate to use in the network
-        learning_rate: Learning rate for the Adam optimizer
-        max_len: Maximum length for padding/truncating input sequences
-        embedding_dim: Embedding dimension for the input
-        vocab_size: Maximum vocabulary size for tokenization
-        model_save_dir: Directory to save the trained BiLSTM model weights
-        model_name: Name of the model for saving weights
-        """
         self.num_classes = num_classes
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
@@ -57,19 +45,20 @@ class BiLSTMClassifier:
         self.model_save_dir = model_save_dir
         self.model_name = model_name
 
-        # Initialize tokenizer
-        self.tokenizer = Tokenizer(num_words=self.vocab_size, oov_token="<OOV>")
+        # Initialize tokenizer (not needed if using pre-tokenized sequences)
+        self.tokenizer = None  # Remove tokenizer if not using raw text
 
         # Build the BiLSTM-based classification model
         self.model = self.build_model()
 
     def build_model(self):
-        """
-        Builds and compiles a BiLSTM-based classification model.
-        """
         model = Sequential()
         # Embedding layer
-        model.add(Embedding(input_dim=self.vocab_size, output_dim=self.embedding_dim, input_length=self.max_len))
+        model.add(Embedding(
+            input_dim=self.vocab_size, 
+            output_dim=self.embedding_dim, 
+            input_length=self.max_len
+        ))
 
         # BiLSTM layer
         model.add(Bidirectional(LSTM(64, return_sequences=True)))
@@ -81,83 +70,52 @@ class BiLSTMClassifier:
         # Output layer
         model.add(Dense(self.num_classes, activation='softmax'))
 
-        # Set up the optimizer and compile
+        # Compile the model
         optimizer = Adam(learning_rate=self.learning_rate)
         model.compile(
             optimizer=optimizer, 
-            loss='categorical_crossentropy',  # Use for one-hot labels
+            loss='categorical_crossentropy', 
             metrics=['accuracy']
         )
         return model
 
-    def fit_tokenizer(self, texts):
-        """
-        Fits the tokenizer on the given text data.
-        texts: List of text samples for training the tokenizer.
-        """
-        self.tokenizer.fit_on_texts(texts)
-
     def extract_features(self, texts):
         """
-        Tokenizes and pads text sequences.
-
-        texts: List of input text samples.
-
-        Returns:
-        Padded sequences ready for input to the BiLSTM model.
+        Converts pre-tokenized sequences (lists of string IDs) to integer arrays.
         """
-        if isinstance(texts, np.ndarray):
-            texts = texts.astype(str).tolist()  # Ensure it's a list of strings
-        elif isinstance(texts, list):
-            texts = [str(text) for text in texts]  # Convert all items to strings
-
-        # Debug: Print the first few texts
-        print("Sample texts:", texts[:5])
-
-        # Tokenize the texts
-        sequences = self.tokenizer.texts_to_sequences(texts)
-
-        # Debug: Print the first few sequences
-        print("Sample sequences:", sequences[:5])
-
-        # Filter out None or empty sequences
-        sequences = [seq for seq in sequences if seq]  # Remove empty sequences
-
-        # Debug: Print the number of non-empty sequences
-        print(f"Number of non-empty sequences: {len(sequences)}")
-
-        # If all sequences are empty, return an empty array with the correct shape
-        if not sequences:
-            print("Warning: All sequences are empty. Returning an empty array.")
-            return np.zeros((0, self.max_len))
+        sequences = []
+        for text in texts:
+            if isinstance(text, list):
+                # Convert list of string IDs to integers
+                seq = [int(token) for token in text if token.isdigit()]
+            elif isinstance(text, str):
+                # Split string into tokens (if formatted as space-separated IDs)
+                seq = [int(token) for token in text.split() if token.isdigit()]
+            else:
+                seq = []
+            sequences.append(seq)
 
         # Pad sequences
-        padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
+        padded_sequences = pad_sequences(
+            sequences, 
+            maxlen=self.max_len, 
+            padding='post', 
+            truncating='post'
+        )
         return padded_sequences
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
-        """
-        Trains the BiLSTM classifier. 
-        
-        X_train, y_train: 
-            X_train -> Input text sequences (pre-tokenized)
-            y_train -> One-hot or integer labels (depending on your setup)
-
-        X_val, y_val: Same format for validation set (optional).
-        """
         # Convert text to padded sequences
         X_train = self.extract_features(X_train)
         if X_val is not None:
             X_val = self.extract_features(X_val)
 
-        # Convert y_train and y_val to one-hot encoding if they are integers
-        if len(y_train.shape) == 1 or y_train.shape[1] != self.num_classes:
-            y_train = to_categorical(y_train, num_classes=self.num_classes)
-        if y_val is not None and (len(y_val.shape) == 1 or y_val.shape[1] != self.num_classes):
+        # Convert labels to one-hot encoding
+        y_train = to_categorical(y_train, num_classes=self.num_classes)
+        if y_val is not None:
             y_val = to_categorical(y_val, num_classes=self.num_classes)
 
         callbacks = kwargs.pop('callbacks', [])
-        # Early stopping, similar to your original RNN script
         if X_val is not None and y_val is not None:
             early_stopping = EarlyStopping(
                 monitor='val_loss', 
@@ -176,13 +134,13 @@ class BiLSTMClassifier:
             epochs=self.num_epochs,
             validation_data=(X_val, y_val),
             callbacks=callbacks,
-            batch_size=batch_size,  # Can be adjusted for BiLSTM models
+            batch_size=batch_size,
             verbose=1,
             **kwargs
         )
-        
         return history
 
+    # Keep other methods (predict, evaluate, etc.) unchanged
     def predict(self, X, **kwargs):
         """
         Generates class predictions from the BiLSTM model. 
