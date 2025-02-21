@@ -64,73 +64,73 @@ class BERTClassifier:
         val_loader = None
         if X_val is not None and y_val is not None:
             val_loader = self._create_dataloader(X_val, y_val, shuffle=False)
-
+    
         optimizer = AdamW(self.model.parameters(), lr=self.learning_rate)
         os.makedirs("weights", exist_ok=True)
-
+    
         best_val_loss = float('inf')
         patience_counter = 0
         max_patience = 3
-
+    
         for epoch in range(self.num_epochs):
             print(f"Epoch {epoch+1}/{self.num_epochs}")
-
+    
             # ---- Training ----
             self.model.train()
             total_train_loss = 0
             all_train_preds = []
             all_train_labels = []
-
+    
             for batch in tqdm(train_loader, desc="Training"):
                 optimizer.zero_grad()
                 batch = [b.to(self.device) for b in batch]
                 input_ids, attention_mask, labels = batch
-
+    
                 outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
                 loss = outputs.loss
                 total_train_loss += loss.item()
                 logits = outputs.logits
-
+    
                 preds = torch.argmax(logits, dim=-1)
                 all_train_preds.append(preds.cpu().numpy())
                 all_train_labels.append(labels.cpu().numpy())
-
+    
                 loss.backward()
                 optimizer.step()
-
+    
             avg_train_loss = total_train_loss / len(train_loader)
             train_accuracy = accuracy_score(
                 np.concatenate(all_train_labels), np.concatenate(all_train_preds)
             )
-
+    
             # ---- Validation ----
             if val_loader:
                 self.model.eval()
                 total_val_loss = 0
                 all_val_preds = []
                 all_val_labels = []
-
+    
                 with torch.no_grad():
                     for batch in tqdm(val_loader, desc="Validation"):
                         batch = [b.to(self.device) for b in batch]
                         input_ids, attention_mask, labels = batch
-
+    
                         outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
                         loss = outputs.loss
                         total_val_loss += loss.item()
-
+    
                         logits = outputs.logits
                         preds = torch.argmax(logits, dim=-1)
                         all_val_preds.append(preds.cpu().numpy())
                         all_val_labels.append(labels.cpu().numpy())
-
+    
                 avg_val_loss = total_val_loss / len(val_loader)
                 val_accuracy = accuracy_score(
                     np.concatenate(all_val_labels), np.concatenate(all_val_preds)
                 )
                 print(f"Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
                 print(f"Val Loss: {avg_val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}")
-
+    
                 # Early stopping check
                 if avg_val_loss < best_val_loss:
                     best_val_loss = avg_val_loss
@@ -139,14 +139,33 @@ class BERTClassifier:
                     patience_counter += 1
                     if patience_counter >= max_patience:
                         print("Early stopping triggered.")
+                        # Save checkpoint before stopping early
+                        save_path = f"weights/bert_epoch_{epoch+1}.pth"
+                        torch.save(self.model.state_dict(), save_path)
+                        print(f"Model weights saved to {save_path}")
+    
+                        # Save the accuracies in a corresponding text file
+                        txt_save_path = f"weights/bert_epoch_{epoch+1}.txt"
+                        with open(txt_save_path, "w") as f:
+                            f.write(f"Train Accuracy: {train_accuracy:.4f}\n")
+                            f.write(f"Val Accuracy: {val_accuracy:.4f}\n")
+                        print(f"Model accuracies saved to {txt_save_path}")
                         break
             else:
                 print(f"Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
-
+    
             # ---- Save checkpoint ----
             save_path = f"weights/bert_epoch_{epoch+1}.pth"
             torch.save(self.model.state_dict(), save_path)
             print(f"Model weights saved to {save_path}")
+    
+            # Save the accuracies in a corresponding text file
+            txt_save_path = f"weights/bert_epoch_{epoch+1}.txt"
+            with open(txt_save_path, "w") as f:
+                f.write(f"Train Accuracy: {train_accuracy:.4f}\n")
+                if val_loader:
+                    f.write(f"Val Accuracy: {val_accuracy:.4f}\n")
+            print(f"Model accuracies saved to {txt_save_path}")
 
     def predict(self, X):
         self.model.eval()
