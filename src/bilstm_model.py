@@ -19,9 +19,25 @@ class SaveModelWeightsCallback(Callback):
         self.model_name = model_name
 
     def on_epoch_end(self, epoch, logs=None):
-        weights_path = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.pth')
-        self.model.save_weights(weights_path)
-        print(f"Model weights saved to: {weights_path}")
+        # Save model weights in .pth format
+        weights_path_pth = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.pth')
+        self.model.save_weights(weights_path_pth)
+        print(f"Model weights saved to: {weights_path_pth}")
+
+        # Save model weights in .txt format
+        weights_path_txt = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}_weights.txt')
+        with open(weights_path_txt, 'w') as f:
+            for layer in self.model.layers:
+                weights = layer.get_weights()
+                if not weights:
+                    continue
+                f.write(f"=== Layer: {layer.name} ===\n")
+                for i, weight_array in enumerate(weights):
+                    f.write(f"\nWeight {i} - Shape: {weight_array.shape}\n")
+                    np.savetxt(f, weight_array.ravel(), fmt='%.6f', delimiter=' ', newline=' ')
+                    f.write("\n\n")
+            f.write("\n")
+        print(f"Model weights saved in text format to: {weights_path_txt}")
 
 class BiLSTMClassifier:
     def __init__(self, 
