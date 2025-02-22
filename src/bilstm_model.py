@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, GlobalAveragePooling1D, Dropout, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
@@ -12,6 +12,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, classification_rep
 
 import os
 import shutil
+import torch  # For loading PyTorch weights
 
 class SaveModelWeightsCallback(Callback):
     def __init__(self, model_save_dir, model_name):
@@ -20,10 +21,10 @@ class SaveModelWeightsCallback(Callback):
         self.model_name = model_name
 
     def on_epoch_end(self, epoch, logs=None):
-        # Save model weights in .pth format
-        weights_path_pth = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.pth')
-        self.model.save_weights(weights_path_pth)
-        print(f"Model weights saved to: {weights_path_pth}")
+        # Save model weights in .h5 format
+        weights_path_h5 = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.h5')
+        self.model.save_weights(weights_path_h5)
+        print(f"Model weights saved to: {weights_path_h5}")
 
         # Save model weights in .txt format
         weights_path_txt = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}_weights.txt')
@@ -201,7 +202,6 @@ class BiLSTMClassifier:
         )
         return history
 
-    # Keep other methods (predict, evaluate, etc.) unchanged
     def predict(self, X, **kwargs):
         """
         Generates class predictions from the BiLSTM model. 
@@ -279,35 +279,66 @@ class BiLSTMClassifier:
         
         shutil.make_archive(weights_path.replace('.h5', ''), 'zip', self.model_save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
+
     def load_model(self, path=None):
         """
         Loads pretrained weights from the specified path.
-        - If the path is a directory, it looks for a `.h5` file containing the weights.
-        - If the path is a file, it loads the weights from that file.
+        - If the path is a .pth file, it converts PyTorch weights to TensorFlow format.
+        - If the path is a .h5 file, it loads the weights directly.
         If no path is provided, uses the default model_save_dir.
         """
         if path is None:
             path = self.model_save_dir
-    
-        # If the path is a directory, look for a .h5 file
-        if os.path.isdir(path):
-            weights_file = os.path.join(path, f'{self.model_name}_weights.pth')
-            if not os.path.exists(weights_file):
-                raise FileNotFoundError(f"No weights file found in the directory: {path}")
-            path = weights_file
-    
-        # If the path is a file, load the weights
-        if os.path.isfile(path):
+
+        # Check if the path exists
+        if not os.path.exists(path):
+            raise ValueError(f"The specified path does not exist: {path}")
+
+        # If the path is a .pth file, convert and load PyTorch weights
+        if path.endswith('.pth'):
+            # Load PyTorch weights
+            pytorch_state_dict = torch.load(path, map_location='cpu')
+
+            # Map PyTorch weights to TensorFlow/Keras layers
+            for layer in self.model.layers:
+                if isinstance(layer, tf.keras.layers.LSTM):
+                    # Extract PyTorch LSTM weights
+                    weight_ih = pytorch_state_dict['lstm.weight_ih_l0'].numpy()
+                    weight_hh = pytorch_state_dict['lstm.weight_hh_l0'].numpy()
+                    bias_ih = pytorch_state_dict['lstm.bias_ih_l0'].numpy()
+                    bias_hh = pytorch_state_dict['lstm.bias_hh_l0'].numpy()
+
+                    # Combine weights for TensorFlow
+                    kernel = np.concatenate([weight_ih, weight_hh], axis=1).T
+                    recurrent_kernel = np.zeros_like(kernel)  # Placeholder for recurrent weights
+                    bias = np.concatenate([bias_ih, bias_hh])
+
+                    # Set TensorFlow weights
+                    layer.set_weights([kernel, recurrent_kernel, bias])
+
+                elif isinstance(layer, tf.keras.layers.Dense):
+                    # Extract PyTorch dense layer weights
+                    weight = pytorch_state_dict['dense.weight'].numpy().T
+                    bias = pytorch_state_dict['dense.bias'].numpy()
+
+                    # Set TensorFlow weights
+                    layer.set_weights([weight, bias])
+
+            print("PyTorch weights successfully converted and loaded into TensorFlow model.")
+
+        # If the path is a .h5 file, load the weights directly
+        elif path.endswith('.h5'):
             self.model.load_weights(path)
             print(f"Model weights loaded from: {path}")
+
         else:
-            raise ValueError(f"The specified path does not exist: {path}")
-    
-        def __getattr__(self, name):
-            """
-            Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
-            """
-            if name not in ['predict', 'predict_proba']:
-                return getattr(self.model, name)
-            else:
-                raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+            raise ValueError(f"Unsupported file format: {path}. Use '.pth' or '.h5'.")
+
+    def __getattr__(self, name):
+        """
+        Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
+        """
+        if name not in ['predict', 'predict_proba']:
+            return getattr(self.model, name)
+        else:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
