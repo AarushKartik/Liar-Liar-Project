@@ -279,8 +279,31 @@ class BiLSTMClassifier:
         
         shutil.make_archive(weights_path.replace('.h5', ''), 'zip', self.model_save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
-
-    def __getattr__(self, name):
+    def load_model(self, path=None):
+        """
+        Loads pretrained weights from the specified path.
+        - If the path is a directory, it looks for a `.h5` file containing the weights.
+        - If the path is a file, it loads the weights from that file.
+        If no path is provided, uses the default model_save_dir.
+        """
+        if path is None:
+            path = self.model_save_dir
+    
+        # If the path is a directory, look for a .h5 file
+        if os.path.isdir(path):
+            weights_file = os.path.join(path, f'{self.model_name}_weights.h5')
+            if not os.path.exists(weights_file):
+                raise FileNotFoundError(f"No weights file found in the directory: {path}")
+            path = weights_file
+    
+        # If the path is a file, load the weights
+        if os.path.isfile(path):
+            self.model.load_weights(path)
+            print(f"Model weights loaded from: {path}")
+        else:
+            raise ValueError(f"The specified path does not exist: {path}")
+    
+        def __getattr__(self, name):
         """
         Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
         """
