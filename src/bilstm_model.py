@@ -304,10 +304,10 @@ class BiLSTMClassifier:
             raise ValueError(f"The specified path does not exist: {path}")
     
         def __getattr__(self, name):
-        """
-        Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
-        """
-        if name not in ['predict', 'predict_proba']:
-            return getattr(self.model, name)
-        else:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+            """
+            Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
+            """
+            if name not in ['predict', 'predict_proba']:
+                return getattr(self.model, name)
+            else:
+                raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
