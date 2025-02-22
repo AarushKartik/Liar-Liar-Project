@@ -1,11 +1,12 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, GlobalAveragePooling1D, Dropout, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, Callback
+from tensorflow.keras.preprocessing.text import Tokenizer
 
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
@@ -62,7 +63,7 @@ class BiLSTMClassifier:
         self.model_name = model_name
 
         # Initialize tokenizer (not needed if using pre-tokenized sequences)
-        self.tokenizer = None  # Remove tokenizer if not using raw text
+        self.tokenizer = Tokenizer(num_words=self.vocab_size)
 
         # Build the BiLSTM-based classification model
         self.model = self.build_model()
@@ -129,6 +130,9 @@ class BiLSTMClassifier:
                 seq = []
             sequences.append(seq)
 
+        # Debug: Print the first few sequences
+        print("First few sequences:", sequences[:5])
+
         # Pad sequences
         padded_sequences = pad_sequences(
             sequences, 
@@ -136,6 +140,10 @@ class BiLSTMClassifier:
             padding='post', 
             truncating='post'
         )
+
+        # Debug: Print the shape and first few padded sequences
+        print("Padded sequences shape:", padded_sequences.shape)
+        print("First few padded sequences:", padded_sequences[:5])
 
         # Save features if a path is provided
         if save_path:
@@ -148,6 +156,13 @@ class BiLSTMClassifier:
         return padded_sequences
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
+        # Tokenize input data if it's raw text
+        if isinstance(X_train[0], str):
+            self.tokenizer.fit_on_texts(X_train)
+            X_train = self.tokenizer.texts_to_sequences(X_train)
+            if X_val is not None:
+                X_val = self.tokenizer.texts_to_sequences(X_val)
+
         # Convert text to padded sequences
         X_train = self.extract_features(X_train, save_path=f'{self.model_name}_train_features.npy')
         if X_val is not None:
@@ -189,6 +204,8 @@ class BiLSTMClassifier:
         Generates class predictions from the BiLSTM model. 
         X should be raw text sequences.
         """
+        if isinstance(X[0], str):
+            X = self.tokenizer.texts_to_sequences(X)
         X = self.extract_features(X, save_path=f'{self.model_name}_test_features.npy')  # Convert text to tokenized sequences
         y_pred = self.model.predict(X, **kwargs)
         return y_pred.argmax(axis=-1)  # Return predicted class indices
@@ -197,6 +214,8 @@ class BiLSTMClassifier:
         """
         Returns the predicted probabilities for each class.
         """
+        if isinstance(X[0], str):
+            X = self.tokenizer.texts_to_sequences(X)
         X = self.extract_features(X, save_path=f'{self.model_name}_test_features.npy')  # Convert text to tokenized sequences
         y_pred = self.model.predict(X, **kwargs)
         return y_pred  # Output softmax probabilities
