@@ -291,7 +291,7 @@ class BiLSTMClassifier:
     
         # If the path is a directory, look for a .h5 file
         if os.path.isdir(path):
-            weights_file = os.path.join(path, f'{self.model_name}_weights.h5')
+            weights_file = os.path.join(path, f'{self.model_name}_weights.pth')
             if not os.path.exists(weights_file):
                 raise FileNotFoundError(f"No weights file found in the directory: {path}")
             path = weights_file
