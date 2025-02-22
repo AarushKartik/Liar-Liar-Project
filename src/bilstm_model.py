@@ -144,9 +144,9 @@ class BiLSTMClassifier:
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
         # Convert text to padded sequences
-        X_train = self.extract_features(X_train, save_path='train_features.npy')
+        X_train = self.extract_features(X_train, save_path=f'{self.model_name}_train_features.npy')
         if X_val is not None:
-            X_val = self.extract_features(X_val, save_path='val_features.npy')
+            X_val = self.extract_features(X_val, save_path=f'{self.model_name}_val_features.npy')
 
         # Convert labels to one-hot encoding
         y_train = to_categorical(y_train, num_classes=self.num_classes)
@@ -184,7 +184,7 @@ class BiLSTMClassifier:
         Generates class predictions from the BiLSTM model. 
         X should be raw text sequences.
         """
-        X = self.extract_features(X, save_path='test_features.npy')  # Convert text to tokenized sequences
+        X = self.extract_features(X, save_path=f'{self.model_name}_test_features.npy')  # Convert text to tokenized sequences
         y_pred = self.model.predict(X, **kwargs)
         return y_pred.argmax(axis=-1)  # Return predicted class indices
 
@@ -192,7 +192,7 @@ class BiLSTMClassifier:
         """
         Returns the predicted probabilities for each class.
         """
-        X = self.extract_features(X, save_path='test_features.npy')  # Convert text to tokenized sequences
+        X = self.extract_features(X, save_path=f'{self.model_name}_test_features.npy')  # Convert text to tokenized sequences
         y_pred = self.model.predict(X, **kwargs)
         return y_pred  # Output softmax probabilities
 
