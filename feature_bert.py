@@ -21,7 +21,7 @@ def bert():
     # Step 3: Build the BERT model and load pretrained weights
     print("Step 3: Building the BERT model...")
     classifier = BERTClassifier(num_classes=6, num_epochs=3)
-    classifier.load_model()  # New method to load pretrained weights
+    classifier.load_model('weights/bert_epoch_3.pth')  # New method to load pretrained weights
     print("Pretrained model loaded successfully.\n")
 
     # Step 4: Extract and save feature vectors for each split
