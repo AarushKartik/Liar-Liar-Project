@@ -13,7 +13,7 @@ def bilstm():
     # Step 2: Preprocess the data
     print("Step 2: Preprocessing the data...")
     # (Assuming labels are not needed for feature extraction)
-    X_train, _, X_test, _, X_valid, _ = process_data_pipeline_bilstm(
+    X_train, X_test, X_valid = process_data_pipeline_bilstm(
         'train.tsv', 'test.tsv', 'valid.tsv'
     )
     print("Data preprocessing complete.\n")
