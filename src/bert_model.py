@@ -274,15 +274,24 @@ class BERTClassifier:
         """
         Convenience method:
         1. Gets the features for the given split
-        2. Saves them to feature_vectors/<split_name>/bert/features.npy
+        2. Saves them to feature_vectors/<split_name>/bert/features.npy and features.txt
         """
+        # Get the feature vectors
         features = self.get_features(X)
-
+    
+        # Create the output directory
         out_dir = f"feature_vectors/{split_name}/bert"
         os.makedirs(out_dir, exist_ok=True)
-
-        np.save(os.path.join(out_dir, "features.npy"), features)
-        print(f"[{split_name.upper()}] Feature vectors saved to: {out_dir}/features.npy")
+    
+        # Save the feature vectors in .npy format
+        npy_path = os.path.join(out_dir, f"bert_{split_name}_features.npy")
+        np.save(npy_path, features)
+        print(f"[{split_name.upper()}] Feature vectors saved to: {npy_path}")
+    
+        # Save the feature vectors in .txt format
+        txt_path = os.path.join(out_dir, f"bert_{split_name}_features.txt")
+        np.savetxt(txt_path, features, fmt='%.6f', delimiter=' ')
+        print(f"[{split_name.upper()}] Feature vectors saved to: {txt_path}")
 
     def __getattr__(self, name):
         """
