@@ -20,7 +20,7 @@ def bilstm():
 
     # Step 3: Build the BiLSTM model and load pretrained weights
     print("Step 3: Building the BiLSTM model...")
-    classifier = BiLSTMClassifier(vocab_size=10000, embedding_dim=128, hidden_dim=256, num_classes=6)
+    classifier = BiLSTMClassifier(vocab_size=10000, embedding_dim=128, num_classes=6)
     classifier.load_model()  # New method to load pretrained weights
     print("Pretrained model loaded successfully.\n")
 
