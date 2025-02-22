@@ -236,6 +236,29 @@ class BERTClassifier:
         os.makedirs(save_dir, exist_ok=True)
         self.model.save_pretrained(save_dir)
         print(f"Model saved to {save_dir}")
+    
+    def load_model(self, path=None):
+        """
+        Loads pretrained weights from the specified path.
+        - If the path is a directory, it loads the model using from_pretrained.
+        - If the path is a file, it loads the state dict from that file and applies it to the model.
+        If no path is provided, uses the default model_save_dir.
+        """
+        if path is None:
+            path = self.model_save_dir
+    
+        if os.path.isdir(path):
+            # Load using Hugging Face's from_pretrained method
+            self.model = BertForSequenceClassification.from_pretrained(path)
+        elif os.path.isfile(path):
+            # Load the state dict from the file and update the current model
+            state_dict = torch.load(path, map_location=self.device)
+            self.model.load_state_dict(state_dict)
+        else:
+            raise ValueError(f"The specified path does not exist: {path}")
+    
+        self.model.to(self.device)
+        print(f"Model loaded from {path}")
 
     def get_features(self, X):
         """
@@ -269,12 +292,11 @@ class BERTClassifier:
         # Concatenate all batch outputs
         all_features = np.concatenate(all_features, axis=0)
         return all_features
-
-    def extract_feature_vectors(self, X, split_name="train"):
+    
+    def extract_feature_vectors(self, X, split_name="train", data_num="1"):
         """
-        Convenience method:
-        1. Gets the features for the given split
-        2. Saves them to feature_vectors/<split_name>/bert/features.npy and features.txt
+        1. Gets the features for the given split.
+        2. Saves them to feature_vectors/{split_name}/bert/bert_{split_name}_{data_num}_features.npy and .txt
         """
         # Get the feature vectors
         features = self.get_features(X)
@@ -284,12 +306,12 @@ class BERTClassifier:
         os.makedirs(out_dir, exist_ok=True)
     
         # Save the feature vectors in .npy format
-        npy_path = os.path.join(out_dir, f"bert_{split_name}_features.npy")
+        npy_path = os.path.join(out_dir, f"bert_{split_name}_{data_num}_features.npy")
         np.save(npy_path, features)
         print(f"[{split_name.upper()}] Feature vectors saved to: {npy_path}")
     
         # Save the feature vectors in .txt format
-        txt_path = os.path.join(out_dir, f"bert_{split_name}_features.txt")
+        txt_path = os.path.join(out_dir, f"bert_{split_name}_{data_num}_features.txt")
         np.savetxt(txt_path, features, fmt='%.6f', delimiter=' ')
         print(f"[{split_name.upper()}] Feature vectors saved to: {txt_path}")
 
