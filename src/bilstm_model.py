@@ -62,7 +62,7 @@ class BiLSTMClassifier:
         self.model_save_dir = model_save_dir
         self.model_name = model_name
 
-        # Initialize tokenizer (not needed if using pre-tokenized sequences)
+        # Initialize tokenizer
         self.tokenizer = Tokenizer(num_words=self.vocab_size)
 
         # Build the BiLSTM-based classification model
@@ -162,6 +162,9 @@ class BiLSTMClassifier:
             X_train = self.tokenizer.texts_to_sequences(X_train)
             if X_val is not None:
                 X_val = self.tokenizer.texts_to_sequences(X_val)
+
+        # Debug: Print tokenized sequences
+        print("Tokenized sequences (X_train):", X_train[:5])
 
         # Convert text to padded sequences
         X_train = self.extract_features(X_train, save_path=f'{self.model_name}_train_features.npy')
