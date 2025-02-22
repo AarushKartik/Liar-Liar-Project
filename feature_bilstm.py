@@ -30,22 +30,6 @@ def bilstm():
     classifier.extract_feature_vectors(X_train, split_name="train")
     classifier.extract_feature_vectors(X_valid, split_name="valid")
     classifier.extract_feature_vectors(X_test,  split_name="test")
-    # Your existing code
-
-    weights_path = './models/my_model.pt'
-
-    # Inspect the file header before loading
-    inspect_file_header(weights_path)
-
-    # Load the model
-    try:
-        pytorch_state_dict = torch.load(weights_path, map_location='cpu', weights_only=True)
-        print("Model loaded successfully!")
-    except Exception as e:
-        print(f"Error loading model: {e}")
-
-# Call the bilstm function
-bilstm()
-
+    
 if __name__ == '__main__':
     bilstm()
