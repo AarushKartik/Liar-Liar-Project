@@ -99,14 +99,15 @@ class BiLSTMClassifier:
         """
         Saves the extracted feature vectors to a file.
         :param features: The feature vectors (numpy array).
-        :param file_path: Path to save the features (e.g., 'features.npy' or 'features.csv').
+        :param file_path: Path to save the features (e.g., 'features.npy' or 'features.txt').
         """
         if file_path.endswith('.npy'):
             np.save(file_path, features)
-        elif file_path.endswith('.csv'):
-            np.savetxt(file_path, features, delimiter=',')
+        elif file_path.endswith('.txt'):
+            with open(file_path, 'w') as f:
+                np.savetxt(f, features, fmt='%.6f', delimiter=' ')
         else:
-            raise ValueError("Unsupported file format. Use '.npy' or '.csv'.")
+            raise ValueError("Unsupported file format. Use '.npy' or '.txt'.")
         print(f"Features saved to: {file_path}")
 
     def extract_features(self, texts, save_path=None):
@@ -138,7 +139,11 @@ class BiLSTMClassifier:
 
         # Save features if a path is provided
         if save_path:
+            # Save in .npy format
             self.save_features(padded_sequences, save_path)
+            # Save in .txt format
+            txt_path = save_path.replace('.npy', '.txt')
+            self.save_features(padded_sequences, txt_path)
 
         return padded_sequences
 
