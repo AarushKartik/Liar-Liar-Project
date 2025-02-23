@@ -106,7 +106,6 @@ class BiLSTMClassifier:
         :param X: Input sequences, shape (num_samples, seq_len)
         :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
         """
-        self.model.eval()  # Set model to evaluation mode
     
         # ✅ Ensure X is a NumPy array before converting to Tensor
         if isinstance(X, list):
