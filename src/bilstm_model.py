@@ -99,34 +99,52 @@ class BiLSTMClassifier:
         )
         return model
 
-    def extract_features(self, texts):
-        """
-        Extracts feature vectors from the trained embedding layer using pre-trained weights.
-        :param texts: Input raw text data.
-        :return: Feature vectors as a NumPy array.
-        """
-        if self.model is None:
-            raise ValueError("Model must be loaded before extracting features.")
+def extract_features(self, texts, split_name="train", save_dir="features"):
+    """
+    Extracts feature vectors from the trained embedding layer using pre-trained weights
+    and saves them for different dataset splits (train, valid, test).
 
-        if isinstance(texts[0], str):
-            sequences = self.tokenizer.texts_to_sequences(texts)
-        else:
-            sequences = texts
+    :param texts: List of input text samples.
+    :param split_name: Dataset split name ('train', 'valid', 'test').
+    :param save_dir: Directory to save extracted feature vectors.
+    :return: Extracted feature vectors as a NumPy array.
+    """
+    if self.model is None:
+        raise ValueError("Model must be loaded before extracting features.")
 
-        padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
+    os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
 
-        embedding_layer = self.model.get_layer(index=0)  # Get the embedding layer
-        embedding_weights = embedding_layer.get_weights()[0]  # Extract embedding matrix
+    # Convert text to tokenized sequences
+    if isinstance(texts[0], str):
+        sequences = self.tokenizer.texts_to_sequences(texts)
+    else:
+        sequences = texts  # Assume already tokenized
 
-        feature_vectors = np.zeros((len(padded_sequences), self.embedding_dim))
+    # Pad sequences
+    padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
 
-        for i, sequence in enumerate(padded_sequences):
-            embedded_vector = np.mean([embedding_weights[token] for token in sequence if token < self.vocab_size], axis=0)
-            if embedded_vector.shape == (self.embedding_dim,):
-                feature_vectors[i] = embedded_vector
+    # Get embedding layer weights
+    embedding_layer = self.model.get_layer(index=0)  
+    embedding_weights = embedding_layer.get_weights()[0]  
 
-        print("Extracted feature vectors shape:", feature_vectors.shape)
-        return feature_vectors
+    # Extract feature vectors using the trained embeddings
+    feature_vectors = np.zeros((len(padded_sequences), self.embedding_dim))
+
+    for i, sequence in enumerate(padded_sequences):
+        embedded_vector = np.mean(
+            [embedding_weights[token] for token in sequence if token < self.vocab_size], axis=0
+        )
+        if embedded_vector.shape == (self.embedding_dim,):
+            feature_vectors[i] = embedded_vector
+
+    print(f"Extracted feature vectors for {split_name} set: {feature_vectors.shape}")
+
+    # Save feature vectors
+    np.save(os.path.join(save_dir, f"{split_name}_features.npy"), feature_vectors)
+    np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
+
+    return feature_vectors
+
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
         # Tokenize input data if it's raw text
