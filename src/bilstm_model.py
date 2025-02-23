@@ -120,7 +120,13 @@ class BiLSTMClassifier:
         else:
             sequences = texts  # Assume already tokenized
     
-        # Pad sequences
+        # ✅ Ensure all sequences are non-empty (filter out empty lists)
+        sequences = [seq if len(seq) > 0 else [0] for seq in sequences]
+    
+        # ✅ Ensure all sequences are lists (not single integers)
+        sequences = [seq if isinstance(seq, list) else [seq] for seq in sequences]
+    
+        # ✅ Now pad sequences safely
         padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
     
         # Get embedding layer weights
@@ -131,11 +137,11 @@ class BiLSTMClassifier:
         feature_vectors = np.zeros((len(padded_sequences), self.embedding_dim))
     
         for i, sequence in enumerate(padded_sequences):
-            embedded_vector = np.mean(
-                [embedding_weights[token] for token in sequence if token < self.vocab_size], axis=0
-            )
-            if embedded_vector.shape == (self.embedding_dim,):
-                feature_vectors[i] = embedded_vector
+            valid_tokens = [embedding_weights[token] for token in sequence if token < self.vocab_size]
+            if len(valid_tokens) > 0:
+                embedded_vector = np.mean(valid_tokens, axis=0)
+                if embedded_vector.shape == (self.embedding_dim,):
+                    feature_vectors[i] = embedded_vector
     
         print(f"Extracted feature vectors for {split_name} set: {feature_vectors.shape}")
     
@@ -144,6 +150,7 @@ class BiLSTMClassifier:
         np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
     
         return feature_vectors
+
 
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
