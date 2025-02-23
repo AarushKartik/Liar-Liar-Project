@@ -51,8 +51,8 @@ class BiLSTMClassifier:
                  dropout_rate=0.1, 
                  learning_rate=2e-5,
                  max_len=128,  # Max sequence length for padding/truncating input sequences
-                 embedding_dim=100,  # Dimensionality of the word embeddings
-                 vocab_size=20000,  # Vocabulary size for tokenization
+                 embedding_dim=128,  # Dimensionality of the word embeddings
+                 vocab_size=10000,  # Vocabulary size for tokenization
                  model_save_dir='weights/bilstm',
                  model_name='bilstm'):
         self.num_classes = num_classes
