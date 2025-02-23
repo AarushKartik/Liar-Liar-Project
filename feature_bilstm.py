@@ -20,7 +20,7 @@ def bilstm():
 
     # Step 3: Build the BiLSTM model and load pretrained weights
     print("Step 3: Building the BiLSTM model...")
-    classifier = BiLSTMClassifier(vocab_size=10000, embedding_dim=128, num_classes=6)
+    classifier = BiLSTMClassifier(vocab_size=20000, embedding_dim=100, num_classes=6)
     weights_path = '/content/drive/MyDrive/weights/weights_extraction/bilstm_epoch_1.h5'
     classifier.load_model(weights_path)
     print("Pretrained model loaded successfully.\n")
