@@ -285,49 +285,35 @@ class BiLSTMClassifier:
     
     def save_model_weights(self):
         """
-        Saves the trained model weights to a folder called 'weights_extraction'
-        inside a larger folder called 'weights' in Google Drive.
-        Also creates a zip archive of the weights.
+        Saves the model weights inside 'weights_extraction' in Google Drive.
+        Example filename: /content/drive/My Drive/weights/weights_extraction/roberta_epoch_1.h5
         """
-        # Mount Google Drive (if not already mounted)
-        drive.mount('/content/drive')
-    
-        # Define the paths
-        weights_dir = '/content/drive/My Drive/weights/weights_extraction'
-        weights_path = os.path.join(weights_dir, 'bilstm.h5')
-        zip_path = os.path.join(weights_dir, 'weights.zip')
-        
-        # Create the directory if it doesn't exist
-        os.makedirs(weights_dir, exist_ok=True)
-        
-        # Save the model weights
+        save_dir = self.model_save_dir
+        os.makedirs(save_dir, exist_ok=True)
+
+        weights_path = os.path.join(save_dir, f"roberta_epoch_{epoch}.h5")
+        zip_path = os.path.join(save_dir, f"roberta_epoch_{epoch}.zip")
+
         self.model.save_weights(weights_path)
         print(f"Model weights saved to: {weights_path}")
-        
-        # Create a zip archive of the weights
-        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', weights_dir)
+
+        # Zip the weights file
+        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
 
-    def load_model(self, path=None):
+
+    def load_model_weights(self, epoch=1):
         """
-        Loads pretrained weights from the specified path.
-        - Only supports .h5 files.
-        - If no path is provided, uses the default model_save_dir.
+        Loads the model weights from '/content/drive/My Drive/weights/weights_extraction/roberta_epoch_{epoch}.h5'.
         """
-        if path is None:
-            path = self.model_save_dir
-    
-        # Check if the path exists
-        if not os.path.exists(path):
-            raise ValueError(f"The specified path does not exist: {path}")
-    
-        # Ensure the file is a .h5 file
-        if not path.endswith('.h5'):
-            raise ValueError(f"Unsupported file format: {path}. Only '.h5' files are supported.")
-    
-        # Load the weights directly
-        self.model.load_weights(path)
-        print(f"Model weights loaded from: {path}")
+        weights_path = os.path.join(self.model_save_dir, f"roberta_epoch_{epoch}.h5")
+
+        if not os.path.exists(weights_path):
+            raise ValueError(f"Model weights not found at {weights_path}")
+
+        self.model.load_weights(weights_path)
+        print(f"Model weights loaded from: {weights_path}")
+
     def __getattr__(self, name):
         """
         Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
