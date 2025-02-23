@@ -25,6 +25,14 @@ def bilstm():
     classifier.load_model(weights_path)
     print("Pretrained model loaded successfully.\n")
 
+    # Ensure X_train is not a tuple
+    if isinstance(X_train, tuple):
+        X_train = X_train[0]  # Extract only the input sequences
+    if isinstance(X_valid, tuple):
+        X_valid = X_valid[0]
+    if isinstance(X_test, tuple):
+        X_test = X_test[0]
+
     # Step 4: Extract and save feature vectors for each split
     print("Step 4: Extracting and saving feature vectors...")
     classifier.extract_feature_vectors(X_train, split_name="train")
