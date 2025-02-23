@@ -120,20 +120,29 @@ class BiLSTMClassifier:
         else:
             sequences = texts  # Assume already tokenized
     
-        #  Convert all sequences to lists (avoid NumPy shape errors)
-        sequences = [list(seq) if isinstance(seq, (np.ndarray, tuple)) else seq for seq in sequences]
+        # ✅ Debugging: Print sample sequences
+        print(f"First 5 sequences before processing: {sequences[:5]}")
     
-        #  Replace empty sequences with [0] (prevents pad_sequences() from failing)
-        sequences = [seq if len(seq) > 0 else [0] for seq in sequences]
+        # ✅ Ensure all sequences are lists of integers
+        processed_sequences = []
+        for seq in sequences:
+            if seq is None or len(seq) == 0:  
+                processed_sequences.append([0])  # Replace empty sequences with [0]
+            elif isinstance(seq, int):  
+                processed_sequences.append([seq])  # Convert single integer into a list
+            elif isinstance(seq, (list, np.ndarray)):  
+                processed_sequences.append(list(seq))  # Ensure list format
+            else:
+                raise ValueError(f"Unexpected sequence format: {seq}")
     
-        #  Ensure all sequences are lists (not single integers)
-        sequences = [seq if isinstance(seq, list) else [int(seq)] for seq in sequences]
+        # ✅ Truncate long sequences
+        processed_sequences = [seq[:self.max_len] for seq in processed_sequences]
     
-        #  Truncate sequences if they exceed max_len
-        sequences = [seq[:self.max_len] for seq in sequences]
+        # ✅ Debugging: Print processed sequences before padding
+        print(f"First 5 sequences after processing: {processed_sequences[:5]}")
     
-        #  Now pad sequences safely
-        padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
+        # ✅ Now pad sequences safely
+        padded_sequences = pad_sequences(processed_sequences, maxlen=self.max_len, padding='post', truncating='post')
     
         # Get embedding layer weights
         embedding_layer = self.model.get_layer(index=0)  
@@ -156,6 +165,7 @@ class BiLSTMClassifier:
         np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
     
         return feature_vectors
+
 
 
 
