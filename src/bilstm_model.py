@@ -99,64 +99,34 @@ class BiLSTMClassifier:
         )
         return model
 
-    def save_features(self, features, file_path):
+     def extract_features(self, texts):
         """
-        Saves the extracted feature vectors to a file.
-        :param features: The feature vectors (numpy array).
-        :param file_path: Path to save the features (e.g., 'features.npy' or 'features.txt').
+        Extracts feature vectors from the trained embedding layer using pre-trained weights.
+        :param texts: Input raw text data.
+        :return: Feature vectors as a NumPy array.
         """
-        if file_path.endswith('.npy'):
-            np.save(file_path, features)
-        elif file_path.endswith('.txt'):
-            with open(file_path, 'w') as f:
-                np.savetxt(f, features, fmt='%.6f', delimiter=' ')
+        if self.model is None:
+            raise ValueError("Model must be loaded before extracting features.")
+
+        if isinstance(texts[0], str):
+            sequences = self.tokenizer.texts_to_sequences(texts)
         else:
-            raise ValueError("Unsupported file format. Use '.npy' or '.txt'.")
-        print(f"Features saved to: {file_path}")
+            sequences = texts
 
-    def extract_features(self, texts, save_path=None):
-        """
-        Converts pre-tokenized sequences (lists of string IDs) to integer arrays.
-        :param texts: Input texts or tokenized sequences.
-        :param save_path: Optional path to save the extracted features (e.g., 'features.npy').
-        :return: Padded sequences as numpy array.
-        """
-        sequences = []
-        for text in texts:
-            if isinstance(text, list):
-                # Convert list of string IDs to integers
-                seq = [int(token) for token in text if token.isdigit()]
-            elif isinstance(text, str):
-                # Split string into tokens (if formatted as space-separated IDs)
-                seq = [int(token) for token in text.split() if token.isdigit()]
-            else:
-                seq = []
-            sequences.append(seq)
+        padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
 
-        # Debug: Print the first few sequences
-        print("First few sequences:", sequences[:5])
+        embedding_layer = self.model.get_layer(index=0)  # Get the embedding layer
+        embedding_weights = embedding_layer.get_weights()[0]  # Extract embedding matrix
 
-        # Pad sequences
-        padded_sequences = pad_sequences(
-            sequences, 
-            maxlen=self.max_len, 
-            padding='post', 
-            truncating='post'
-        )
+        feature_vectors = np.zeros((len(padded_sequences), self.embedding_dim))
 
-        # Debug: Print the shape and first few padded sequences
-        print("Padded sequences shape:", padded_sequences.shape)
-        print("First few padded sequences:", padded_sequences[:5])
+        for i, sequence in enumerate(padded_sequences):
+            embedded_vector = np.mean([embedding_weights[token] for token in sequence if token < self.vocab_size], axis=0)
+            if embedded_vector.shape == (self.embedding_dim,):
+                feature_vectors[i] = embedded_vector
 
-        # Save features if a path is provided
-        if save_path:
-            # Save in .npy format
-            self.save_features(padded_sequences, save_path)
-            # Save in .txt format
-            txt_path = save_path.replace('.npy', '.txt')
-            self.save_features(padded_sequences, txt_path)
-
-        return padded_sequences
+        print("Extracted feature vectors shape:", feature_vectors.shape)
+        return feature_vectors
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, batch_size=32, **kwargs):
         # Tokenize input data if it's raw text
