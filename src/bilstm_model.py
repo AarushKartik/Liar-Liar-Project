@@ -100,6 +100,12 @@ class BiLSTMClassifier:
         return model
 
     def extract_features(self, texts, save_path=None, split_name=None):
+        # Debug: Check type of X_valid before passing to extract_features
+        print(f"[DEBUG] Type of X_valid before feature extraction: {type(X_valid)}")
+        
+        # Ensure X_valid is not an integer or tuple
+        if isinstance(X_valid, int):
+            raise ValueError(f"Error: X_valid is an integer ({X_valid}) but should be a list of sequences.")
         if isinstance(texts, tuple):
             texts = texts[0]
         """
