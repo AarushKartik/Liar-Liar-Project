@@ -1,11 +1,12 @@
+import os
+import shutil
 import numpy as np
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
-import os
-import shutil
+
 
 class RoBERTaClassifier:
-    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.85e-05, batch_size=16):
+    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.85e-05, batch_size=16, model_save_dir="weights"):
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
@@ -14,11 +15,13 @@ class RoBERTaClassifier:
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
+        self.model_save_dir = model_save_dir  # Directory to save model weights
+
+        # Ensure directory exists
+        os.makedirs(self.model_save_dir, exist_ok=True)
+
         self.model = self.build_model()
         self.feature_extractor = self.build_feature_extractor()
-        
-        # Mount Google Drive and set the save path only if running in Colab
-        self.save_path = self.setup_drive()
 
     def set_gpu_configuration(self):
         gpus = tf.config.list_physical_devices('GPU')
@@ -31,21 +34,6 @@ class RoBERTaClassifier:
                 print(f"Failed to set GPU memory growth: {e}")
         else:
             print("No GPU found. Using CPU.")
-    
-    def setup_drive(self):
-        import sys
-        if 'google.colab' in sys.modules:
-            from google.colab import drive
-            try:
-                drive.mount('/content/drive', force_remount=True)
-            except Exception as e:
-                print(f"Failed to mount Google Drive: {e}")
-                return "/content"
-
-            save_dir = "/content/drive/My Drive/weights/weights_extraction"
-            os.makedirs(save_dir, exist_ok=True)
-            return save_dir
-
 
     def build_model(self):
         config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
@@ -54,8 +42,7 @@ class RoBERTaClassifier:
         input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
         attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
 
-        # Wrap the Hugging Face model call in a Lambda layer
-        outputs = tf.keras.layers.Lambda(lambda x: roberta_model(input_ids=x[0], attention_mask=x[1]))([input_ids, attention_mask])
+        outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
 
         model = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=outputs.logits)
         optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate, jit_compile=False)
@@ -71,9 +58,6 @@ class RoBERTaClassifier:
         feature_extractor = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=cls_embedding)
         return feature_extractor
 
-    def extract_features(self, x):
-        return self.feature_extractor.predict(x)
-
     def fit(self, x, y, validation_data=None, batch_size=32, verbose=1, **kwargs):
         kwargs.pop("epochs", None)
         tf.keras.backend.clear_session()  # Clear previous models to free memory
@@ -88,62 +72,77 @@ class RoBERTaClassifier:
         )
         
         # Save model weights after training
-        self.save_model_weights()
+        self.save_model_weights(epoch=self.num_epochs)
         return history
 
-    def save_model_weights(self):
-        # Define the new save path inside 'weights/weights_extraction'
-        save_dir = os.path.join("weights", "weights_extraction")
-        os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
+    ### === Saving and Loading Model Weights (Matching BERT Format) === ###
     
-        weights_path = os.path.join(save_dir, "roberta_epoch_1.h5")
-        zip_path = os.path.join(save_dir, "weights.zip")
-        
-        # Save the model weights
+    def save_model_weights(self, epoch=1):
+        """
+        Saves the model weights inside 'weights_extraction', following the same structure as BERT.
+        Example filename: weights/weights_extraction/roberta_epoch_1.h5
+        """
+        save_dir = os.path.join(self.model_save_dir, "weights_extraction")
+        os.makedirs(save_dir, exist_ok=True)
+
+        weights_path = os.path.join(save_dir, f"roberta_epoch_{epoch}.h5")
+        zip_path = os.path.join(save_dir, f"roberta_epoch_{epoch}.zip")
+
         self.model.save_weights(weights_path)
         print(f"Model weights saved to: {weights_path}")
-        
+
         # Zip the weights file
         shutil.make_archive(weights_path.replace('.h5', ''), 'zip', save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
 
-# Optuna Objective Function
-def objective(trial):
-    # Define hyperparameters to optimize
-    learning_rate = trial.suggest_float("learning_rate", 1e-5, 5e-4, log=True)
-    dropout_rate = trial.suggest_float("dropout_rate", 0.1, 0.5)
-    batch_size = trial.suggest_categorical("batch_size", [8, 16, 32])
-    num_epochs = trial.suggest_int("num_epochs", 2, 5)
+    def load_model_weights(self, epoch=1):
+        """
+        Loads the model weights from 'weights_extraction/roberta_epoch_{epoch}.h5'.
+        """
+        weights_path = os.path.join(self.model_save_dir, "weights_extraction", f"roberta_epoch_{epoch}.h5")
 
-    # Initialize the model with suggested hyperparameters
-    classifier = RoBERTaClassifier(
-        num_classes=6,
-        num_epochs=num_epochs,
-        dropout_rate=dropout_rate,
-        learning_rate=learning_rate,
-        batch_size=batch_size,
-    )
+        if not os.path.exists(weights_path):
+            raise ValueError(f"Model weights not found at {weights_path}")
 
-    # Dummy data for demonstration
-    x = {
-        "input_ids": tf.random.uniform((100, 512), minval=0, maxval=100, dtype=tf.int32),
-        "attention_mask": tf.ones((100, 512), dtype=tf.int32),
-    }
-    y = tf.random.uniform((100,), minval=0, maxval=6, dtype=tf.int32)
+        self.model.load_weights(weights_path)
+        print(f"Model weights loaded from: {weights_path}")
 
-    # Train the model
-    history = classifier.fit(x, y, validation_data=(x, y), batch_size=batch_size, verbose=0)
+    ### === Extracting and Saving Feature Vectors (Matching BERT Format) === ###
+    
+    def get_features(self, X):
+        """
+        Extracts feature vectors from the RoBERTa model.
+        Returns the [CLS] embedding from the last hidden layer.
+        """
+        return self.feature_extractor.predict(X)
 
-    # Return the validation accuracy as the objective value
-    return history.history["val_accuracy"][-1]
+    def extract_feature_vectors(self, X, split_name="train", data_num="1"):
+        """
+        Extracts and saves feature vectors.
+        Saves to feature_vectors/{split_name}/roberta/roberta_{split_name}_{data_num}_features.npy and .txt
+        """
+        features = self.get_features(X)
 
+        # Define output directory (matching BERT's format)
+        out_dir = f"feature_vectors/{split_name}/roberta"
+        os.makedirs(out_dir, exist_ok=True)
 
-# Example Usage
-if __name__ == "__main__":
-    classifier = RoBERTaClassifier()
-    sample_input = {
-        "input_ids": tf.random.uniform((1, 512), minval=0, maxval=100, dtype=tf.int32),
-        "attention_mask": tf.ones((1, 512), dtype=tf.int32),
-    }
-    feature_vectors = classifier.extract_features(sample_input)
-    print("Extracted feature vector shape:", feature_vectors.shape)
+        # Save feature vectors in .npy format
+        npy_path = os.path.join(out_dir, f"roberta_{split_name}_{data_num}_features.npy")
+        np.save(npy_path, features)
+        print(f"[{split_name.upper()}] Feature vectors saved to: {npy_path}")
+
+        # Save feature vectors in .txt format
+        txt_path = os.path.join(out_dir, f"roberta_{split_name}_{data_num}_features.txt")
+        np.savetxt(txt_path, features, fmt='%.6f', delimiter=' ')
+        print(f"[{split_name.upper()}] Feature vectors saved to: {txt_path}")
+
+    def __getattr__(self, name):
+        """
+        Allows calls to underlying model methods except for 'predict', 'predict_proba', 'get_features', and 'extract_feature_vectors'.
+        """
+        if name not in ['predict', 'predict_proba', 'get_features', 'extract_feature_vectors']:
+            return getattr(self.model, name)
+        else:
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
