@@ -99,14 +99,28 @@ class BiLSTMClassifier:
             metrics=['accuracy']
         )
         return model
-    def get_features(self, X):
+   def get_features(self, X):
         """
         Extracts features from the BiLSTM model.
         
         :param X: Input sequences, shape (num_samples, seq_len)
         :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
         """
-        # Create a DataLoader for batch processing
+        self.model.eval()  # Set model to evaluation mode
+    
+        # ✅ Ensure X is a NumPy array before converting to Tensor
+        if isinstance(X, list):
+            print("[DEBUG] Converting list to NumPy array before tensor conversion...")
+            X = np.array(X)
+    
+        if not isinstance(X, np.ndarray):
+            raise TypeError(f"[ERROR] Expected X to be a NumPy array, but got {type(X)}")
+    
+        # ✅ Ensure X has the correct shape (num_samples, seq_len)
+        if len(X.shape) != 2:
+            raise ValueError(f"[ERROR] X should have shape (num_samples, seq_len), but got {X.shape}")
+    
+        # ✅ Convert to PyTorch tensor safely
         dataset = TensorDataset(torch.tensor(X, dtype=torch.long))
         data_loader = DataLoader(dataset, batch_size=32, shuffle=False)
     
