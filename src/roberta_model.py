@@ -95,15 +95,19 @@ class RoBERTaClassifier:
         return history
 
     def save_model_weights(self):
-        weights_path = os.path.join(self.save_path, "weights.h5")
-        zip_path = os.path.join(self.save_path, "weights.zip")
+        # Define the new save path inside 'weights/weights_extraction'
+        save_dir = os.path.join("weights", "weights_extraction")
+        os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
+    
+        weights_path = os.path.join(save_dir, "roberta_epoch_1.h5")
+        zip_path = os.path.join(save_dir, "weights.zip")
         
         # Save the model weights
         self.model.save_weights(weights_path)
         print(f"Model weights saved to: {weights_path}")
         
         # Zip the weights file
-        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', self.save_path)
+        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
 
 # Optuna Objective Function
