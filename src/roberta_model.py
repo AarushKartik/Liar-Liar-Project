@@ -14,7 +14,7 @@ class RoBERTaClassifier:
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
         self.learning_rate = learning_rate
-        self.model_save_dir = model_save_dir  # Directory to save model weights
+        self.model_save_dir = os.path.abspath(model_save_dir)  # Directory to save model weights
 
         # Ensure directory exists
         os.makedirs(self.model_save_dir, exist_ok=True)
