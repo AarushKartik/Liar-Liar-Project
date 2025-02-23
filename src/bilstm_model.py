@@ -285,57 +285,23 @@ class BiLSTMClassifier:
     def load_model(self, path=None):
         """
         Loads pretrained weights from the specified path.
-        - If the path is a .pth file, it converts PyTorch weights to TensorFlow format.
-        - If the path is a .h5 file, it loads the weights directly.
-        If no path is provided, uses the default model_save_dir.
+        - Only supports .h5 files.
+        - If no path is provided, uses the default model_save_dir.
         """
         if path is None:
             path = self.model_save_dir
-
+    
         # Check if the path exists
         if not os.path.exists(path):
             raise ValueError(f"The specified path does not exist: {path}")
-
-        # If the path is a .pth file, convert and load PyTorch weights
-        if path.endswith('.pth'):
-            # Load PyTorch weights
-            pytorch_state_dict = torch.load(path, map_location='cpu')
-
-            # Map PyTorch weights to TensorFlow/Keras layers
-            for layer in self.model.layers:
-                if isinstance(layer, tf.keras.layers.LSTM):
-                    # Extract PyTorch LSTM weights
-                    weight_ih = pytorch_state_dict['lstm.weight_ih_l0'].numpy()
-                    weight_hh = pytorch_state_dict['lstm.weight_hh_l0'].numpy()
-                    bias_ih = pytorch_state_dict['lstm.bias_ih_l0'].numpy()
-                    bias_hh = pytorch_state_dict['lstm.bias_hh_l0'].numpy()
-
-                    # Combine weights for TensorFlow
-                    kernel = np.concatenate([weight_ih, weight_hh], axis=1).T
-                    recurrent_kernel = np.zeros_like(kernel)  # Placeholder for recurrent weights
-                    bias = np.concatenate([bias_ih, bias_hh])
-
-                    # Set TensorFlow weights
-                    layer.set_weights([kernel, recurrent_kernel, bias])
-
-                elif isinstance(layer, tf.keras.layers.Dense):
-                    # Extract PyTorch dense layer weights
-                    weight = pytorch_state_dict['dense.weight'].numpy().T
-                    bias = pytorch_state_dict['dense.bias'].numpy()
-
-                    # Set TensorFlow weights
-                    layer.set_weights([weight, bias])
-
-            print("PyTorch weights successfully converted and loaded into TensorFlow model.")
-
-        # If the path is a .h5 file, load the weights directly
-        elif path.endswith('.h5'):
-            self.model.load_weights(path)
-            print(f"Model weights loaded from: {path}")
-
-        else:
-            raise ValueError(f"Unsupported file format: {path}. Use '.pth' or '.h5'.")
-
+    
+        # Ensure the file is a .h5 file
+        if not path.endswith('.h5'):
+            raise ValueError(f"Unsupported file format: {path}. Only '.h5' files are supported.")
+    
+        # Load the weights directly
+        self.model.load_weights(path)
+        print(f"Model weights loaded from: {path}")
     def __getattr__(self, name):
         """
         Allows calls to underlying model methods except for 'predict' and 'predict_proba'.
