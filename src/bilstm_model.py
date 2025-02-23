@@ -20,6 +20,9 @@ class SaveModelWeightsCallback(Callback):
         self.model_save_dir = model_save_dir
         self.model_name = model_name
 
+        # Create the directory if it doesn't exist
+        os.makedirs(self.model_save_dir, exist_ok=True)
+
     def on_epoch_end(self, epoch, logs=None):
         # Save model weights in .h5 format
         weights_path_h5 = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.h5')
@@ -40,7 +43,6 @@ class SaveModelWeightsCallback(Callback):
                     f.write("\n\n")
             f.write("\n")
         print(f"Model weights saved in text format to: {weights_path_txt}")
-
 class BiLSTMClassifier:
     def __init__(self, 
                  num_classes=6, 
