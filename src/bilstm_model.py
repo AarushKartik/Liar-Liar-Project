@@ -105,8 +105,6 @@ class BiLSTMClassifier:
         :param X: Input sequences, shape (num_samples, seq_len)
         :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
         """
-        self.model.eval()  # Set model to evaluation mode
-    
         # Create a DataLoader for batch processing
         dataset = TensorDataset(torch.tensor(X, dtype=torch.long))
         data_loader = DataLoader(dataset, batch_size=32, shuffle=False)
