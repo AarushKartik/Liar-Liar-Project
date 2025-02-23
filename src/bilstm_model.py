@@ -99,7 +99,7 @@ class BiLSTMClassifier:
             metrics=['accuracy']
         )
         return model
-   def get_features(self, X):
+    def get_features(self, X):
         """
         Extracts features from the BiLSTM model.
         
