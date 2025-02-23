@@ -99,7 +99,7 @@ class BiLSTMClassifier:
         )
         return model
 
-   def extract_features(self, texts, save_path=None, split_name=None):
+     def extract_features(self, texts, save_path=None, split_name=None):
         """
         Converts pre-tokenized sequences (lists of string IDs) to integer arrays.
         :param texts: Input texts or tokenized sequences.
