@@ -5,7 +5,7 @@ import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 
 class RoBERTaClassifier:
-    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.85e-05, batch_size=16, model_save_dir= "weights"):
+    def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.85e-05, batch_size=16, model_save_dir="weights"):
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
@@ -46,7 +46,6 @@ class RoBERTaClassifier:
         optimizer = tf.keras.optimizers.Adam(learning_rate=self.learning_rate, jit_compile=False)
         model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
         return model
-
 
     def fit(self, x, y, validation_data=None, batch_size=32, verbose=1, **kwargs):
         kwargs.pop("epochs", None)
@@ -90,6 +89,7 @@ class RoBERTaClassifier:
         # Zip the weights file
         shutil.make_archive(weights_path.replace('.h5', ''), 'zip', save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
+    
     def load_model_weights(self, epoch=1):
         """
         Loads the model weights from 'weights_extraction/roberta_epoch_{epoch}.h5'.
