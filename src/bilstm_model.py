@@ -259,27 +259,51 @@ class BiLSTMClassifier:
 
         return accuracy, confusion, classification_rep
 
+    from google.colab import drive  # Import the drive module to mount Google Drive
+
     def save_model(self, save_dir=None):
         """
-        Saves the trained model weights and architecture to the specified directory (default: weights/bilstm).
+        Saves the trained model weights and architecture to the specified directory.
+        Default directory: 'weights/weights_extraction' in Google Drive.
         """
+        # Mount Google Drive (if not already mounted)
+        drive.mount('/content/drive')
+    
         if save_dir is None:
-            save_dir = self.model_save_dir
+            # Default directory in Google Drive
+            save_dir = '/content/drive/My Drive/weights/weights_extraction'
         
         # Create the directory if it doesn't exist
         os.makedirs(save_dir, exist_ok=True)
-        # Save the entire model (architecture + weights) in Keras format
-        self.model.save(os.path.join(save_dir, 'bilstm_model.h5'))
-        print(f"Model saved to {save_dir}")
-     
-    def save_model_weights(self):
-        weights_path = os.path.join(self.model_save_dir, "bilstm_weights.h5")
-        zip_path = os.path.join(self.model_save_dir, "weights.zip")
         
+        # Save the entire model (architecture + weights) in Keras format
+        model_path = os.path.join(save_dir, 'bilstm_model.h5')
+        self.model.save(model_path)
+        print(f"Model saved to {model_path}")
+    
+    def save_model_weights(self):
+        """
+        Saves the trained model weights to a folder called 'weights_extraction'
+        inside a larger folder called 'weights' in Google Drive.
+        Also creates a zip archive of the weights.
+        """
+        # Mount Google Drive (if not already mounted)
+        drive.mount('/content/drive')
+    
+        # Define the paths
+        weights_dir = '/content/drive/My Drive/weights/weights_extraction'
+        weights_path = os.path.join(weights_dir, 'bilstm_weights.h5')
+        zip_path = os.path.join(weights_dir, 'weights.zip')
+        
+        # Create the directory if it doesn't exist
+        os.makedirs(weights_dir, exist_ok=True)
+        
+        # Save the model weights
         self.model.save_weights(weights_path)
         print(f"Model weights saved to: {weights_path}")
         
-        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', self.model_save_dir)
+        # Create a zip archive of the weights
+        shutil.make_archive(weights_path.replace('.h5', ''), 'zip', weights_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
 
     def load_model(self, path=None):
