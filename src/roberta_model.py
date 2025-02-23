@@ -42,13 +42,10 @@ class RoBERTaClassifier:
                 print(f"Failed to mount Google Drive: {e}")
                 return "/content"
 
-            save_dir = "/content/drive/My Drive/weights"
+            save_dir = "/content/drive/My Drive/weights/weights_extraction"
             os.makedirs(save_dir, exist_ok=True)
             return save_dir
-        else:
-            save_dir = "./weights"
-            os.makedirs(save_dir, exist_ok=True)
-            return save_dir
+
 
     def build_model(self):
         config = RobertaConfig.from_pretrained("roberta-base", num_labels=self.num_classes)
