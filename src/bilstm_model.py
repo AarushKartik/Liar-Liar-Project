@@ -98,6 +98,44 @@ class BiLSTMClassifier:
             metrics=['accuracy']
         )
         return model
+    def get_features(self, X):
+        """
+        Extracts features from the BiLSTM model.
+        
+        :param X: Input sequences, shape (num_samples, seq_len)
+        :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
+        """
+        self.model.eval()  # Set model to evaluation mode
+    
+        # Create a DataLoader for batch processing
+        dataset = TensorDataset(torch.tensor(X, dtype=torch.long))
+        data_loader = DataLoader(dataset, batch_size=32, shuffle=False)
+    
+        all_features = []
+    
+        with torch.no_grad():  # No gradients needed during inference
+            for batch in data_loader:
+                inputs = batch[0].to(self.device)  # Move batch to the same device as model
+    
+                # Forward pass through BiLSTM
+                lstm_out, (h_n, c_n) = self.model.lstm(inputs)  
+    
+                # Extract the last hidden state (final time step)
+                if self.model.lstm.bidirectional:
+                    # BiLSTM has forward and backward states, so we concatenate them
+                    forward_hidden = h_n[-2, :, :]  # Last layer forward hidden state
+                    backward_hidden = h_n[-1, :, :] # Last layer backward hidden state
+                    features = torch.cat((forward_hidden, backward_hidden), dim=1)  # (batch_size, hidden_size * 2)
+                else:
+                    # Standard LSTM: only one hidden state
+                    features = h_n[-1, :, :]  # (batch_size, hidden_size)
+    
+                all_features.append(features.cpu().numpy())  # Move to CPU for NumPy conversion
+    
+        # Concatenate all batches
+        all_features = np.concatenate(all_features, axis=0)  # Shape: (num_samples, hidden_size * 2)
+        
+        return all_features
 
     def extract_feature_vectors(self, X, split_name="train", data_num="1"):
         """
