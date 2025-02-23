@@ -48,14 +48,6 @@ class RoBERTaClassifier:
         model.compile(optimizer=optimizer, loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=["accuracy"])
         return model
 
-    def build_feature_extractor(self):
-        roberta_model = TFRobertaModel.from_pretrained("roberta-base")
-        input_ids = tf.keras.Input(shape=(512,), dtype=tf.int32, name="input_ids")
-        attention_mask = tf.keras.Input(shape=(512,), dtype=tf.int32, name="attention_mask")
-        outputs = roberta_model(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embedding = outputs.last_hidden_state[:, 0, :]
-        feature_extractor = tf.keras.Model(inputs=[input_ids, attention_mask], outputs=cls_embedding)
-        return feature_extractor
 
     def fit(self, x, y, validation_data=None, batch_size=32, verbose=1, **kwargs):
         kwargs.pop("epochs", None)
@@ -81,28 +73,36 @@ class RoBERTaClassifier:
         Saves the model weights inside 'weights_extraction', following the same structure as BERT.
         Example filename: weights/weights_extraction/roberta_epoch_1.h5
         """
+        # Ensure the base directory exists
+        os.makedirs(self.model_save_dir, exist_ok=True)
+    
+        # Define the save directory for weights
         save_dir = os.path.join(self.model_save_dir, "weights_extraction")
         os.makedirs(save_dir, exist_ok=True)
-
+    
+        # Define the paths for saving weights and zip file
         weights_path = os.path.join(save_dir, f"roberta_epoch_{epoch}.h5")
         zip_path = os.path.join(save_dir, f"roberta_epoch_{epoch}.zip")
-
+    
+        # Save the model weights
         self.model.save_weights(weights_path)
         print(f"Model weights saved to: {weights_path}")
-
+    
         # Zip the weights file
         shutil.make_archive(weights_path.replace('.h5', ''), 'zip', save_dir)
         print(f"Model weights zipped and saved to: {zip_path}")
-
     def load_model_weights(self, epoch=1):
         """
         Loads the model weights from 'weights_extraction/roberta_epoch_{epoch}.h5'.
         """
+        # Define the path to the weights file
         weights_path = os.path.join(self.model_save_dir, "weights_extraction", f"roberta_epoch_{epoch}.h5")
-
+    
+        # Check if the weights file exists
         if not os.path.exists(weights_path):
             raise ValueError(f"Model weights not found at {weights_path}")
-
+    
+        # Load the model weights
         self.model.load_weights(weights_path)
         print(f"Model weights loaded from: {weights_path}")
 
@@ -120,17 +120,18 @@ class RoBERTaClassifier:
         Extracts and saves feature vectors.
         Saves to feature_vectors/{split_name}/roberta/roberta_{split_name}_{data_num}_features.npy and .txt
         """
+        # Extract feature vectors
         features = self.get_features(X)
-
+    
         # Define output directory (matching BERT's format)
-        out_dir = f"feature_vectors/{split_name}/roberta"
+        out_dir = os.path.join("feature_vectors", split_name, "roberta")
         os.makedirs(out_dir, exist_ok=True)
-
+    
         # Save feature vectors in .npy format
         npy_path = os.path.join(out_dir, f"roberta_{split_name}_{data_num}_features.npy")
         np.save(npy_path, features)
         print(f"[{split_name.upper()}] Feature vectors saved to: {npy_path}")
-
+    
         # Save feature vectors in .txt format
         txt_path = os.path.join(out_dir, f"roberta_{split_name}_{data_num}_features.txt")
         np.savetxt(txt_path, features, fmt='%.6f', delimiter=' ')
