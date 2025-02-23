@@ -106,29 +106,34 @@ class BiLSTMClassifier:
         :param X: Input sequences, shape (num_samples, seq_len)
         :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
         """
-        self.model.make_predict_function()  # Ensures model is ready for inference (for TensorFlow 1.x users)
+        self.model._make_predict_function()  # Ensures model is ready for inference (for TensorFlow 1.x users)
         
         # ✅ Ensure X is a NumPy array
         if isinstance(X, list):
             print(f"[DEBUG] Converting `X` list to NumPy array...")
             X = np.array(X)
-        
+    
         if not isinstance(X, np.ndarray):
             raise TypeError(f"[ERROR] Expected X to be a NumPy array, but got {type(X)}")
-        
+    
         # ✅ Fix input shape mismatch by ensuring `X` is padded to `max_len`
         if X.shape[1] != self.max_len:
             print(f"[DEBUG] Padding/Truncating X to `max_len={self.max_len}` (was {X.shape[1]})...")
             X = pad_sequences(X, maxlen=self.max_len, padding='post', truncating='post')
-        
+    
         # ✅ Predict feature representations
-        lstm_out = self.model.predict(X)  # Shape: (num_samples, seq_len, hidden_dim)
-        
-        # ✅ Extract last hidden state for each sequence
-        features = lstm_out[:, -1, :]  # Shape: (num_samples, hidden_dim)
-        
+        lstm_out = self.model.predict(X)  # Output shape depends on `return_sequences`
+    
+        # ✅ Handle both return_sequences=True and return_sequences=False
+        if len(lstm_out.shape) == 3:  # Shape: (num_samples, seq_len, hidden_dim)
+            features = lstm_out[:, -1, :]  # Extract last time step
+        elif len(lstm_out.shape) == 2:  # Shape: (num_samples, hidden_dim)
+            features = lstm_out  # Already reduced to last hidden state
+        else:
+            raise ValueError(f"[ERROR] Unexpected shape from BiLSTM output: {lstm_out.shape}")
+    
         print(f"[INFO] Extracted features shape: {features.shape}")
-        
+    
         return features
 
     def extract_feature_vectors(self, X, split_name="train", data_num="1"):
