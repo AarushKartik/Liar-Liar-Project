@@ -106,7 +106,7 @@ class BiLSTMClassifier:
         :param X: Input sequences, shape (num_samples, seq_len)
         :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
         """
-        self.model._make_predict_function()  # Ensures model is ready for inference (for TensorFlow 1.x users)
+        self.model.make_predict_function()  # Ensures model is ready for inference (for TensorFlow 1.x users)
         
         # ✅ Ensure X is a NumPy array
         if isinstance(X, list):
