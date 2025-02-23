@@ -99,83 +99,56 @@ class BiLSTMClassifier:
         )
         return model
 
-    def extract_features(self, texts, split_name="train", save_dir="features"):
+   def extract_features(self, texts, save_path=None, split_name=None):
         """
-        Extracts feature vectors from the trained embedding layer using pre-trained weights
-        and saves them for different dataset splits (train, valid, test).
-    
-        :param texts: List of input text samples.
-        :param split_name: Dataset split name ('train', 'valid', 'test').
-        :param save_dir: Directory to save extracted feature vectors.
-        :return: Extracted feature vectors as a NumPy array.
+        Converts pre-tokenized sequences (lists of string IDs) to integer arrays.
+        :param texts: Input texts or tokenized sequences.
+        :param save_path: Optional path to save the extracted features (e.g., 'features.npy').
+        :param split_name: Name of the dataset split (e.g., 'train', 'val', 'test').
+        :return: Padded sequences as numpy array.
         """
-        if self.model is None:
-            raise ValueError("Model must be loaded before extracting features.")
-    
-        os.makedirs(save_dir, exist_ok=True)  # Ensure the directory exists
-    
-        # Convert text to tokenized sequences
-        if isinstance(texts[0], str):
-            sequences = self.tokenizer.texts_to_sequences(texts)
-        else:
-            sequences = texts  # Assume already tokenized
-    
-        #  Debugging: Print sample sequences before processing
-        print(f"First 5 sequences before processing: {sequences[:5]}")
-    
-        #  Ensure all sequences are properly formatted lists of integers
-        processed_sequences = []
-        for seq in sequences:
-            if seq is None or len(seq) == 0:  
-                processed_sequences.append([0])  # Replace empty sequences with [0]
-            elif isinstance(seq, int):  
-                processed_sequences.append([seq])  # Convert single integer into a list
-            elif isinstance(seq, (list, np.ndarray, tuple)):  
-                processed_sequences.append(list(seq))  # Ensure proper list format
+        sequences = []
+        for text in texts:
+            if isinstance(text, list):
+                # Convert list of string IDs to integers
+                seq = [int(token) for token in text if token.isdigit()]
+            elif isinstance(text, str):
+                # Split string into tokens (if formatted as space-separated IDs)
+                seq = [int(token) for token in text.split() if token.isdigit()]
             else:
-                raise ValueError(f"Unexpected sequence format: {type(seq)} - {seq}")
+                seq = []
     
-        # Debugging: Print types of sequences to ensure correct structure
-        print(f"First 5 processed sequence types: {[type(seq) for seq in processed_sequences[:5]]}")
+            # Ensure the sequence is not empty
+            if len(seq) == 0:
+                print(f"Warning: Empty sequence found in {split_name} data. Padding with zeros.")
+                seq = [0] * self.max_len  # Pad with zeros to match max_len
     
-        #  Ensure all sequences are valid lists before passing to `pad_sequences`
-        assert all(isinstance(seq, list) for seq in processed_sequences), "All sequences must be lists before padding!"
+            sequences.append(seq)
     
-        #  Truncate long sequences
-        processed_sequences = [seq[:self.max_len] for seq in processed_sequences]
+        # Debug: Print the first few sequences
+        print(f"First few sequences ({split_name}):", sequences[:5])
     
-        #  Debugging: Print sequences before padding
-        print(f"First 5 sequences after processing: {processed_sequences[:5]}")
+        # Pad sequences
+        padded_sequences = pad_sequences(
+            sequences, 
+            maxlen=self.max_len, 
+            padding='post', 
+            truncating='post'
+        )
     
-        #  Now pad sequences safely
-        try:
-            padded_sequences = pad_sequences(processed_sequences, maxlen=self.max_len, padding='post', truncating='post')
-        except Exception as e:
-            print("Error occurred during padding. Debugging info:")
-            print(f"Sequences before padding: {processed_sequences[:5]}")
-            raise e  # Rethrow the error for visibility
+        # Debug: Print the shape and first few padded sequences
+        print(f"Padded sequences shape ({split_name}):", padded_sequences.shape)
+        print(f"First few padded sequences ({split_name}):", padded_sequences[:5])
     
-        # Get embedding layer weights
-        embedding_layer = self.model.get_layer(index=0)  
-        embedding_weights = embedding_layer.get_weights()[0]  
+        # Save features if a path is provided
+        if save_path:
+            # Save in .npy format
+            self.save_features(padded_sequences, save_path)
+            # Save in .txt format
+            txt_path = save_path.replace('.npy', '.txt')
+            self.save_features(padded_sequences, txt_path)
     
-        # Extract feature vectors using the trained embeddings
-        feature_vectors = np.zeros((len(padded_sequences), self.embedding_dim))
-    
-        for i, sequence in enumerate(padded_sequences):
-            valid_tokens = [embedding_weights[token] for token in sequence if token < self.vocab_size]
-            if len(valid_tokens) > 0:
-                embedded_vector = np.mean(valid_tokens, axis=0)
-                if embedded_vector.shape == (self.embedding_dim,):
-                    feature_vectors[i] = embedded_vector
-    
-        print(f"Extracted feature vectors for {split_name} set: {feature_vectors.shape}")
-    
-        # Save feature vectors
-        np.save(os.path.join(save_dir, f"{split_name}_features.npy"), feature_vectors)
-        np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
-    
-        return feature_vectors
+        return padded_sequences
 
 
 
