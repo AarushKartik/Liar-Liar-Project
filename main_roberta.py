@@ -135,7 +135,7 @@ def roberta():
     # Step 5: Train the model with the new callback
     print("Step 5: Training the model...")
     try:
-        save_dir = "./saved_weights"
+        save_dir = "/weights/weights_extraction"
         os.makedirs(save_dir, exist_ok=True)
         
         # Create our custom callback that saves weights and accuracies each epoch
