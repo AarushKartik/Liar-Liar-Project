@@ -292,7 +292,7 @@ class BiLSTMClassifier:
     
         # Define the paths
         weights_dir = '/content/drive/My Drive/weights/weights_extraction'
-        weights_path = os.path.join(weights_dir, 'bilstm_epoch_5.h5')
+        weights_path = os.path.join(weights_dir, 'bilstm.h5')
         zip_path = os.path.join(weights_dir, 'weights.zip')
         
         # Create the directory if it doesn't exist
