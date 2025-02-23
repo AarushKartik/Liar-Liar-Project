@@ -20,7 +20,6 @@ class RoBERTaClassifier:
         os.makedirs(self.model_save_dir, exist_ok=True)
 
         self.model = self.build_model()
-        self.feature_extractor = self.build_feature_extractor()
 
     def set_gpu_configuration(self):
         gpus = tf.config.list_physical_devices('GPU')
