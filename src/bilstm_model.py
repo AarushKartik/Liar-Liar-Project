@@ -99,7 +99,7 @@ class BiLSTMClassifier:
         )
         return model
 
-     def extract_features(self, texts):
+    def extract_features(self, texts):
         """
         Extracts feature vectors from the trained embedding layer using pre-trained weights.
         :param texts: Input raw text data.
