@@ -107,6 +107,10 @@ class BiLSTMClassifier:
         :param split_name: Name of the dataset split (e.g., 'train', 'val', 'test').
         :return: Padded sequences as numpy array.
         """
+        # Check if texts is iterable
+        if not isinstance(texts, (list, np.ndarray)):
+            raise TypeError(f"Expected 'texts' to be a list or array, but got {type(texts)}")
+    
         sequences = []
         for text in texts:
             if isinstance(text, list):
@@ -117,17 +121,17 @@ class BiLSTMClassifier:
                 seq = [int(token) for token in text.split() if token.isdigit()]
             else:
                 seq = []
-        
+    
             # Ensure the sequence is not empty
             if len(seq) == 0:
                 print(f"Warning: Empty sequence found in {split_name} data. Padding with zeros.")
                 seq = [0] * self.max_len  # Pad with zeros to match max_len
-        
+    
             sequences.append(seq)
-        
+    
         # Debug: Print the first few sequences
         print(f"First few sequences ({split_name}):", sequences[:5])
-        
+    
         # Pad sequences
         padded_sequences = pad_sequences(
             sequences, 
@@ -135,11 +139,11 @@ class BiLSTMClassifier:
             padding='post', 
             truncating='post'
         )
-        
+    
         # Debug: Print the shape and first few padded sequences
         print(f"Padded sequences shape ({split_name}):", padded_sequences.shape)
         print(f"First few padded sequences ({split_name}):", padded_sequences[:5])
-        
+    
         # Save features if a path is provided
         if save_path:
             # Save in .npy format
@@ -147,7 +151,7 @@ class BiLSTMClassifier:
             # Save in .txt format
             txt_path = save_path.replace('.npy', '.txt')
             self.save_features(padded_sequences, txt_path)
-        
+    
         return padded_sequences
 
 
