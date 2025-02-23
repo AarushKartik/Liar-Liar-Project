@@ -120,13 +120,16 @@ class BiLSTMClassifier:
         else:
             sequences = texts  # Assume already tokenized
     
-        # ✅ Ensure all sequences are non-empty (filter out empty lists)
+        #  Convert NumPy arrays to lists if needed
+        sequences = [list(seq) if isinstance(seq, np.ndarray) else seq for seq in sequences]
+    
+        #  Remove empty sequences (replace with [0] placeholder)
         sequences = [seq if len(seq) > 0 else [0] for seq in sequences]
     
-        # ✅ Ensure all sequences are lists (not single integers)
-        sequences = [seq if isinstance(seq, list) else [seq] for seq in sequences]
+        #  Truncate sequences manually if they are too long
+        sequences = [seq[:self.max_len] for seq in sequences]
     
-        # ✅ Now pad sequences safely
+        #  Now pad sequences safely
         padded_sequences = pad_sequences(sequences, maxlen=self.max_len, padding='post', truncating='post')
     
         # Get embedding layer weights
@@ -150,6 +153,7 @@ class BiLSTMClassifier:
         np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
     
         return feature_vectors
+
 
 
 
