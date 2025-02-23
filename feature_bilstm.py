@@ -27,9 +27,9 @@ def bilstm():
 
     # Step 4: Extract and save feature vectors for each split
     print("Step 4: Extracting and saving feature vectors...")
-    classifier.extract_features(X_train, split_name="train")
-    classifier.extract_features(X_valid, split_name="valid")
-    classifier.extract_features(X_test,  split_name="test")
+    classifier.extract_feature_vectors(X_train, split_name="train")
+    classifier.extract_feature_vectors(X_valid, split_name="valid")
+    classifier.extract_feature_vectors(X_test,  split_name="test")
     
 if __name__ == '__main__':
     bilstm()
