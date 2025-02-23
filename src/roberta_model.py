@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 from transformers import TFRobertaForSequenceClassification, TFRobertaModel, RobertaConfig
 
-
 class RoBERTaClassifier:
     def __init__(self, num_classes=6, num_epochs=3, dropout_rate=0.1298723500192933, learning_rate=1.85e-05, batch_size=16, model_save_dir="weights"):
         # Ensure the model uses GPU if available
@@ -75,7 +74,7 @@ class RoBERTaClassifier:
         self.save_model_weights(epoch=self.num_epochs)
         return history
 
-    ### === Saving and Loading Model Weights (Matching BERT Format) === ###
+    ### === Saving and Loading Model Weights === ###
     
     def save_model_weights(self, epoch=1):
         """
@@ -107,7 +106,7 @@ class RoBERTaClassifier:
         self.model.load_weights(weights_path)
         print(f"Model weights loaded from: {weights_path}")
 
-    ### === Extracting and Saving Feature Vectors (Matching BERT Format) === ###
+    ### === Extracting and Saving Feature Vectors === ###
     
     def get_features(self, X):
         """
@@ -145,4 +144,3 @@ class RoBERTaClassifier:
             return getattr(self.model, name)
         else:
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
-
