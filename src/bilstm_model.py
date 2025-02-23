@@ -120,13 +120,16 @@ class BiLSTMClassifier:
         else:
             sequences = texts  # Assume already tokenized
     
-        #  Convert NumPy arrays to lists if needed
-        sequences = [list(seq) if isinstance(seq, np.ndarray) else seq for seq in sequences]
+        #  Convert all sequences to lists (avoid NumPy shape errors)
+        sequences = [list(seq) if isinstance(seq, (np.ndarray, tuple)) else seq for seq in sequences]
     
-        #  Remove empty sequences (replace with [0] placeholder)
+        #  Replace empty sequences with [0] (prevents pad_sequences() from failing)
         sequences = [seq if len(seq) > 0 else [0] for seq in sequences]
     
-        #  Truncate sequences manually if they are too long
+        #  Ensure all sequences are lists (not single integers)
+        sequences = [seq if isinstance(seq, list) else [int(seq)] for seq in sequences]
+    
+        #  Truncate sequences if they exceed max_len
         sequences = [seq[:self.max_len] for seq in sequences]
     
         #  Now pad sequences safely
@@ -153,6 +156,7 @@ class BiLSTMClassifier:
         np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
     
         return feature_vectors
+
 
 
 
