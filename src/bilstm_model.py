@@ -120,29 +120,40 @@ class BiLSTMClassifier:
         else:
             sequences = texts  # Assume already tokenized
     
-        # ✅ Debugging: Print sample sequences
+        #  Debugging: Print sample sequences before processing
         print(f"First 5 sequences before processing: {sequences[:5]}")
     
-        # ✅ Ensure all sequences are lists of integers
+        #  Ensure all sequences are properly formatted lists of integers
         processed_sequences = []
         for seq in sequences:
             if seq is None or len(seq) == 0:  
                 processed_sequences.append([0])  # Replace empty sequences with [0]
             elif isinstance(seq, int):  
                 processed_sequences.append([seq])  # Convert single integer into a list
-            elif isinstance(seq, (list, np.ndarray)):  
-                processed_sequences.append(list(seq))  # Ensure list format
+            elif isinstance(seq, (list, np.ndarray, tuple)):  
+                processed_sequences.append(list(seq))  # Ensure proper list format
             else:
-                raise ValueError(f"Unexpected sequence format: {seq}")
+                raise ValueError(f"Unexpected sequence format: {type(seq)} - {seq}")
     
-        # ✅ Truncate long sequences
+        # Debugging: Print types of sequences to ensure correct structure
+        print(f"First 5 processed sequence types: {[type(seq) for seq in processed_sequences[:5]]}")
+    
+        #  Ensure all sequences are valid lists before passing to `pad_sequences`
+        assert all(isinstance(seq, list) for seq in processed_sequences), "All sequences must be lists before padding!"
+    
+        #  Truncate long sequences
         processed_sequences = [seq[:self.max_len] for seq in processed_sequences]
     
-        # ✅ Debugging: Print processed sequences before padding
+        #  Debugging: Print sequences before padding
         print(f"First 5 sequences after processing: {processed_sequences[:5]}")
     
-        # ✅ Now pad sequences safely
-        padded_sequences = pad_sequences(processed_sequences, maxlen=self.max_len, padding='post', truncating='post')
+        #  Now pad sequences safely
+        try:
+            padded_sequences = pad_sequences(processed_sequences, maxlen=self.max_len, padding='post', truncating='post')
+        except Exception as e:
+            print("Error occurred during padding. Debugging info:")
+            print(f"Sequences before padding: {processed_sequences[:5]}")
+            raise e  # Rethrow the error for visibility
     
         # Get embedding layer weights
         embedding_layer = self.model.get_layer(index=0)  
@@ -165,9 +176,6 @@ class BiLSTMClassifier:
         np.savetxt(os.path.join(save_dir, f"{split_name}_features.txt"), feature_vectors, fmt="%.6f")
     
         return feature_vectors
-
-
-
 
 
 
