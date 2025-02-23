@@ -101,55 +101,30 @@ class BiLSTMClassifier:
         return model
     def get_features(self, X):
         """
-        Extracts features from the BiLSTM model.
+        Extracts feature vectors from the BiLSTM model (Keras version).
         
         :param X: Input sequences, shape (num_samples, seq_len)
         :return: Feature matrix, shape (num_samples, hidden_size * 2) for BiLSTM
         """
-
-        device = next(self.model.parameters()).device
-    
-        # ✅ Ensure X is a NumPy array before converting to Tensor
+        self.model._make_predict_function()  # Ensures model is ready for inference (for TensorFlow 1.x users)
+        
+        # ✅ Ensure X is a NumPy array
         if isinstance(X, list):
-            print("[DEBUG] Converting list to NumPy array before tensor conversion...")
+            print(f"[DEBUG] Converting `X` list to NumPy array...")
             X = np.array(X)
     
         if not isinstance(X, np.ndarray):
             raise TypeError(f"[ERROR] Expected X to be a NumPy array, but got {type(X)}")
     
-        # ✅ Ensure X has the correct shape (num_samples, seq_len)
-        if len(X.shape) != 2:
-            raise ValueError(f"[ERROR] X should have shape (num_samples, seq_len), but got {X.shape}")
+        # ✅ Predict feature representations
+        lstm_out = self.model.predict(X)  # Shape: (num_samples, seq_len, hidden_dim)
     
-        # ✅ Convert to PyTorch tensor safely
-        dataset = TensorDataset(torch.tensor(X, dtype=torch.long))
-        data_loader = DataLoader(dataset, batch_size=32, shuffle=False)
+        # ✅ Extract last hidden state for each sequence
+        features = lstm_out[:, -1, :]  # Shape: (num_samples, hidden_dim)
     
-        all_features = []
+        print(f"[INFO] Extracted features shape: {features.shape}")
     
-        with torch.no_grad():  # No gradients needed during inference
-            for batch in data_loader:
-                inputs = batch[0].to(self.device)  # Move batch to the same device as model
-    
-                # Forward pass through BiLSTM
-                lstm_out, (h_n, c_n) = self.model.lstm(inputs)  
-    
-                # Extract the last hidden state (final time step)
-                if self.model.lstm.bidirectional:
-                    # BiLSTM has forward and backward states, so we concatenate them
-                    forward_hidden = h_n[-2, :, :]  # Last layer forward hidden state
-                    backward_hidden = h_n[-1, :, :] # Last layer backward hidden state
-                    features = torch.cat((forward_hidden, backward_hidden), dim=1)  # (batch_size, hidden_size * 2)
-                else:
-                    # Standard LSTM: only one hidden state
-                    features = h_n[-1, :, :]  # (batch_size, hidden_size)
-    
-                all_features.append(features.cpu().numpy())  # Move to CPU for NumPy conversion
-    
-        # Concatenate all batches
-        all_features = np.concatenate(all_features, axis=0)  # Shape: (num_samples, hidden_size * 2)
-        
-        return all_features
+        return features
 
     def extract_feature_vectors(self, X, split_name="train", data_num="1"):
         """
