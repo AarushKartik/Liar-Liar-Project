@@ -23,7 +23,7 @@ class SaveModelWeightsCallback(Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Save model weights in .h5 format
         weights_path_h5 = os.path.join(self.model_save_dir, f'{self.model_name}_epoch_{epoch + 1}.h5')
-        self.model.save_weights(weights_path_h5)
+        self.model.save_weights(weights_path_h5, save_format='h5')  # Explicitly specify .h5 format
         print(f"Model weights saved to: {weights_path_h5}")
 
         # Save model weights in .txt format
