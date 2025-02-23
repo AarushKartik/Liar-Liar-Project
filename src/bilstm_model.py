@@ -99,68 +99,27 @@ class BiLSTMClassifier:
         )
         return model
 
-    def extract_features(self, texts, save_path=None, split_name=None):
-        # Debug: Check type of X_valid before passing to extract_features
-        print(f"[DEBUG] Type of X_valid before feature extraction: {type(X_valid)}")
-        
-        # Ensure X_valid is not an integer or tuple
-        if isinstance(X_valid, int):
-            raise ValueError(f"Error: X_valid is an integer ({X_valid}) but should be a list of sequences.")
-        if isinstance(texts, tuple):
-            texts = texts[0]
+    def extract_feature_vectors(self, X, split_name="train", data_num="1"):
         """
-        Converts pre-tokenized sequences (lists of string IDs) to integer arrays.
-        :param texts: Input texts or tokenized sequences.
-        :param save_path: Optional path to save the extracted features (e.g., 'features.npy').
-        :param split_name: Name of the dataset split (e.g., 'train', 'val', 'test').
-        :return: Padded sequences as numpy array.
+        1. Gets the features for the given split.
+        2. Saves them to feature_vectors/{split_name}/bilstm/bilstm_{split_name}_{data_num}_features.npy and .txt
         """
-        # Check if texts is iterable
-        if not isinstance(texts, (list, np.ndarray)):
-            raise TypeError(f"Expected 'texts' to be a list or array, but got {type(texts)}")
+        # Get the feature vectors
+        features = self.get_features(X)
     
-        sequences = []
-        for text in texts:
-            if isinstance(text, list):
-                # Convert list of string IDs to integers
-                seq = [int(token) for token in text if token.isdigit()]
-            elif isinstance(text, str):
-                # Split string into tokens (if formatted as space-separated IDs)
-                seq = [int(token) for token in text.split() if token.isdigit()]
-            else:
-                seq = []
+        # Create the output directory
+        out_dir = f"feature_vectors/{split_name}/bilstm"
+        os.makedirs(out_dir, exist_ok=True)
     
-            # Ensure the sequence is not empty
-            if len(seq) == 0:
-                print(f"Warning: Empty sequence found in {split_name} data. Padding with zeros.")
-                seq = [0] * self.max_len  # Pad with zeros to match max_len
+        # Save the feature vectors in .npy format
+        npy_path = os.path.join(out_dir, f"bilstm_{split_name}_{data_num}_features.npy")
+        np.save(npy_path, features)
+        print(f"[{split_name.upper()}] Feature vectors saved to: {npy_path}")
     
-            sequences.append(seq)
-    
-        # Debug: Print the first few sequences
-        print(f"First few sequences ({split_name}):", sequences[:5])
-    
-        # Pad sequences
-        padded_sequences = pad_sequences(
-            sequences, 
-            maxlen=self.max_len, 
-            padding='post', 
-            truncating='post'
-        )
-    
-        # Debug: Print the shape and first few padded sequences
-        print(f"Padded sequences shape ({split_name}):", padded_sequences.shape)
-        print(f"First few padded sequences ({split_name}):", padded_sequences[:5])
-    
-        # Save features if a path is provided
-        if save_path:
-            # Save in .npy format
-            self.save_features(padded_sequences, save_path)
-            # Save in .txt format
-            txt_path = save_path.replace('.npy', '.txt')
-            self.save_features(padded_sequences, txt_path)
-    
-        return padded_sequences
+        # Save the feature vectors in .txt format
+        txt_path = os.path.join(out_dir, f"bilstm_{split_name}_{data_num}_features.txt")
+        np.savetxt(txt_path, features, fmt='%.6f', delimiter=' ')
+        print(f"[{split_name.upper()}] Feature vectors saved to: {txt_path}")
 
 
 
