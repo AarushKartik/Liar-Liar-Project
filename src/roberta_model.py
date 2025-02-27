@@ -9,7 +9,7 @@ class RoBERTaClassifier:
         # Ensure the model uses GPU if available
         self.set_gpu_configuration()
         
-        self.num_classes = num_classes
+        self.num_classes = num_classe
         self.batch_size = batch_size
         self.num_epochs = num_epochs
         self.dropout_rate = dropout_rate
