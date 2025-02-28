@@ -13,9 +13,13 @@ def roberta():
     # Step 2: Preprocess the data
     print("Step 2: Preprocessing the data...")
     # (Assuming labels are not needed for feature extraction)
-    X_train, _, X_test, _, X_valid, _ = process_data_pipeline_roberta(
-        'train.tsv', 'test.tsv', 'valid.tsv'
-    )
+    train_encodings, _, test_encodings, _, valid_encodings, _ = process_data_pipeline_roberta('train.tsv', 'test.tsv', 'valid.tsv')
+
+    # Ensure the correct variables are used
+    X_train = train_encodings
+    X_test = test_encodings
+    X_valid = valid_encodings
+
     print("Data preprocessing complete.\n")
 
     # Step 3: Build the RoBERTa model and load pretrained weights
