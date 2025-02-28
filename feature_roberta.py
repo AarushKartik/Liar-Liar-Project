@@ -16,9 +16,12 @@ def roberta():
     train_encodings, _, test_encodings, _, valid_encodings, _ = process_data_pipeline_roberta('train.tsv', 'test.tsv', 'valid.tsv')
 
     # Ensure the correct variables are used
-    X_train = train_encodings
-    X_test = test_encodings
-    X_valid = valid_encodings
+    X_train = {key: train_encodings[key].numpy() for key in train_encodings}
+    X_test = {key: test_encodings[key].numpy() for key in test_encodings}
+    X_valid = {key: valid_encodings[key].numpy() for key in valid_encodings}
+
+    print(f"Type of X_train after conversion: {type(X_train)}")
+    print(f"Keys in X_train: {list(X_train.keys())}")
 
     print("Data preprocessing complete.\n")
 
