@@ -21,7 +21,7 @@ def bilstm():
     print("Step 3: Building the BiLSTM model...")
     classifier = BiLSTMClassifier(vocab_size=20000, embedding_dim=100, num_classes=6)
     weights_path = '/content/drive/MyDrive/weights/weights_extraction/bilstm_epoch_1.h5'
-    classifier.load_model(weights_path)
+    classifier.model.load_weights(weights_path)  # Correct way to load weights
     print("Pretrained model loaded successfully.\n")
 
     # Ensure X_train is not a tuple
