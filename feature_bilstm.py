@@ -24,6 +24,10 @@ def bilstm():
     # First, ensure the model is initialized
     classifier.build_model()  # If there's a method to build the model architecture
     # Then, load weights
+    print("Model Summary Before Loading Weights:")
+    print(classifier.model.summary())
+    if len(classifier.model.layers) == 0:
+        print("[ERROR] Model has 0 layers. Did you call build_model()?")
     classifier.model.load_weights(weights_path)  # Correct way to load weights
     print("Pretrained model loaded successfully.\n")
 
