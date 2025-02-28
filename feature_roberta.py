@@ -28,6 +28,12 @@ def roberta():
 
     # Step 4: Extract and save feature vectors for each split
     print("Step 4: Extracting and saving feature vectors...")
+    print(f"Type of X_train: {type(X_train)}")
+    if isinstance(X_train, dict):
+        print(f"Keys in X_train: {X_train.keys()}")
+    else:
+        print("X_train is not properly tokenized!")
+
     classifier.extract_feature_vectors(X_train, split_name="train")
     classifier.extract_feature_vectors(X_valid, split_name="valid")
     classifier.extract_feature_vectors(X_test, split_name="test")
