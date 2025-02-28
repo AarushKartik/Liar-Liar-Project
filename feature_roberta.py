@@ -23,8 +23,7 @@ def roberta():
     classifier = RoBERTaClassifier(num_classes=6, num_epochs=5)
     
     # Load pretrained weights from Google Drive or local path
-    weights_path = '/content/drive/MyDrive/weights/weights_extraction/roberta_epoch_5.h5'
-    classifier.load_model(weights_path)
+    classifier.load_model('weights/roberta_epoch_5.h5') 
     print("Pretrained RoBERTa model loaded successfully.\n")
 
     # Step 4: Extract and save feature vectors for each split
