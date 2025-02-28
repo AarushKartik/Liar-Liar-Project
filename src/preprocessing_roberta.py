@@ -106,12 +106,14 @@ def process_data_pipeline_roberta(train_file, test_file, valid_file):
     # Extract raw text for tokenization
     X_train = df_train['Statement'].tolist()
     X_test = df_test['Statement'].tolist()
+    X_valid = df_valid['Statement'].tolist()
     y_train = df_train['Label_Rank'].tolist()
     y_test = df_test['Label_Rank'].tolist()
+    y_valid = df_valid['Label_Rank'].tolist()
 
     # Tokenize data
     tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
     train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="tf", max_length=512)
     test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="tf", max_length=512)
-
-    return X_train, y_train, X_test, y_test, train_encodings, test_encodings
+    valid_encodings = tokenizer(X_valid, padding=True, truncation=True, return_tensors="tf", max_length=512)
+    return train_encodings, y_train, test_encodings, y_test, valid_encodings, y_valid
