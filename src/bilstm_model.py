@@ -73,28 +73,28 @@ class BiLSTMClassifier:
         self.model = self.build_model()
 
     def build_model(self):
-    self.model = Sequential()  # ✅ Assign to self.model
+        self.model = Sequential()  # ✅ Assign to self.model
 
     # Embedding layer
-    self.model.add(Embedding(
+        self.model.add(Embedding(
         input_dim=self.vocab_size, 
         output_dim=self.embedding_dim, 
         input_length=self.max_len
     ))
 
     # BiLSTM layer
-    self.model.add(Bidirectional(LSTM(64, return_sequences=True)))
+        self.model.add(Bidirectional(LSTM(64, return_sequences=True)))
 
     # Add pooling and dropout for regularization
-    self.model.add(GlobalAveragePooling1D())
-    self.model.add(Dropout(self.dropout_rate))
+        self.model.add(GlobalAveragePooling1D())
+        self.model.add(Dropout(self.dropout_rate))
 
     # Output layer
-    self.model.add(Dense(self.num_classes, activation='softmax'))
+        self.model.add(Dense(self.num_classes, activation='softmax'))
 
     # Compile the model
-    optimizer = Adam(learning_rate=self.learning_rate)
-    self.model.compile(
+        optimizer = Adam(learning_rate=self.learning_rate)
+        self.model.compile(
         optimizer=optimizer, 
         loss='categorical_crossentropy', 
         metrics=['accuracy']
