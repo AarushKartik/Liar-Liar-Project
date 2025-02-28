@@ -112,7 +112,7 @@ class RoBERTaClassifier:
         Extracts feature vectors from the RoBERTa model.
         Returns the [CLS] embedding from the last hidden layer.
         """
-        return self.feature_extractor.predict(X)
+        return self.model.predict(X)
 
     def extract_feature_vectors(self, X, split_name="train", data_num="1"):
         """
