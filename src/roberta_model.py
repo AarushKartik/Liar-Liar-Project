@@ -112,7 +112,11 @@ class RoBERTaClassifier:
         Extracts feature vectors from the RoBERTa model.
         Returns the [CLS] embedding from the last hidden layer.
         """
-        return self.model.predict(X)
+        if isinstance(X, dict):  # If X is a dictionary from a tokenizer
+        return self.model.predict([X["input_ids"], X["attention_mask"]])
+    else:
+        raise ValueError("Input X must be a dictionary containing 'input_ids' and 'attention_mask'")
+        
 
     def extract_feature_vectors(self, X, split_name="train", data_num="1"):
         """
