@@ -28,9 +28,9 @@ def roberta():
 
     # Step 4: Extract and save feature vectors for each split
     print("Step 4: Extracting and saving feature vectors...")
-    classifier.feature_extractor(X_train, split_name="train")
-    classifier.feature_extractor(X_valid, split_name="valid")
-    classifier.feature_extractor(X_test, split_name="test")
+    classifier.extract_feature_vectors(X_train, split_name="train")
+    classifier.extract_feature_vectors(X_valid, split_name="valid")
+    classifier.extract_feature_vectors(X_test, split_name="test")
 
 if __name__ == '__main__':
     roberta()
