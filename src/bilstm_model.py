@@ -73,32 +73,36 @@ class BiLSTMClassifier:
         self.model = self.build_model()
 
     def build_model(self):
-        model = Sequential()
-        # Embedding layer
-        model.add(Embedding(
-            input_dim=self.vocab_size, 
-            output_dim=self.embedding_dim, 
-            input_length=self.max_len
-        ))
+    self.model = Sequential()  # ✅ Assign to self.model
 
-        # BiLSTM layer
-        model.add(Bidirectional(LSTM(64, return_sequences=True)))
+    # Embedding layer
+    self.model.add(Embedding(
+        input_dim=self.vocab_size, 
+        output_dim=self.embedding_dim, 
+        input_length=self.max_len
+    ))
 
-        # Add pooling and dropout for regularization
-        model.add(GlobalAveragePooling1D())
-        model.add(Dropout(self.dropout_rate))
+    # BiLSTM layer
+    self.model.add(Bidirectional(LSTM(64, return_sequences=True)))
 
-        # Output layer
-        model.add(Dense(self.num_classes, activation='softmax'))
+    # Add pooling and dropout for regularization
+    self.model.add(GlobalAveragePooling1D())
+    self.model.add(Dropout(self.dropout_rate))
 
-        # Compile the model
-        optimizer = Adam(learning_rate=self.learning_rate)
-        model.compile(
-            optimizer=optimizer, 
-            loss='categorical_crossentropy', 
-            metrics=['accuracy']
-        )
-        return model
+    # Output layer
+    self.model.add(Dense(self.num_classes, activation='softmax'))
+
+    # Compile the model
+    optimizer = Adam(learning_rate=self.learning_rate)
+    self.model.compile(
+        optimizer=optimizer, 
+        loss='categorical_crossentropy', 
+        metrics=['accuracy']
+    )
+
+    print("[INFO] Model built successfully!")  # Debugging print statement
+
+    
     def get_features(self, X):
         """
         Extracts feature vectors from the BiLSTM model (Keras version).
