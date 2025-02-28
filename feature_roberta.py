@@ -20,7 +20,7 @@ def roberta():
 
     # Step 3: Build the RoBERTa model and load pretrained weights
     print("Step 3: Building the RoBERTa model...")
-    classifier = RoBERTaClassifier(num_classes=6, num_epochs=3)
+    classifier = RoBERTaClassifier(num_classes=6, num_epochs=5)
     
     # Load pretrained weights from Google Drive or local path
     classifier.load_model_weights(epoch=1)  # Load weights for epoch 1
