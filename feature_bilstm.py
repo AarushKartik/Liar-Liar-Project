@@ -13,9 +13,8 @@ def bilstm():
     # Step 2: Preprocess the data
     print("Step 2: Preprocessing the data...")
     # (Assuming labels are not needed for feature extraction)
-    X_train, X_test, X_valid = process_data_pipeline_bilstm(
-        'train.tsv', 'test.tsv', 'valid.tsv'
-    )
+    (X_train, y_train, X_test, y_test), (X_valid, y_valid), num_classes = process_data_pipeline_bilstm('train.tsv', 'test.tsv', 'valid.tsv')
+
     print("Data preprocessing complete.\n")
 
     # Step 3: Build the BiLSTM model and load pretrained weights
@@ -35,6 +34,7 @@ def bilstm():
 
     # Step 4: Extract and save feature vectors for each split
     print("Step 4: Extracting and saving feature vectors...")
+    print(f"Type of X_valid after unpacking: {type(X_valid)}")
     classifier.extract_feature_vectors(X_train, split_name="train")
     classifier.extract_feature_vectors(X_valid, split_name="valid")
     classifier.extract_feature_vectors(X_test,  split_name="test")
