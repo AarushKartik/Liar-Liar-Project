@@ -30,6 +30,26 @@ print(f"✅ X_test shape: {X_test.shape}")
 print(f"✅ X_valid shape: {X_valid.shape}")
 
 # Load labels
+
+labels = df['Label_Rank'].values
+
+# First, split into training (80%) and a temporary set (20%)
+y_train, y_temp = train_test_split(
+    labels, test_size=0.2, stratify=labels, random_state=42
+)
+
+# Next, split the temporary set equally into test (10%) and validation (10%)
+y_test, y_valid = train_test_split(
+    y_temp, test_size=0.5, stratify=y_temp, random_state=42
+)
+
+# Save the split labels as .npy files
+np.save("labels_train.npy", y_train)
+np.save("labels_test.npy", y_test)
+np.save("labels_valid.npy", y_valid)
+
+print("Labels saved successfully!")
+
 y_train = np.load("labels_train.npy")
 y_test = np.load("labels_test.npy")
 y_valid = np.load("labels_valid.npy")
