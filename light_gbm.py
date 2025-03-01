@@ -30,7 +30,15 @@ print(f"✅ X_test shape: {X_test.shape}")
 print(f"✅ X_valid shape: {X_valid.shape}")
 
 # Load labels
+import os
 
+# Replace  with your actual dataset filename
+dataset_relative_path = 'dataset_file.csv'
+
+# Get the absolute path
+dataset_absolute_path = os.path.abspath(dataset_relative_path)
+
+print("Absolute path to the dataset:", dataset_absolute_path)
 df = pd.DataFrame(dataset_file)
 labels = df['Label_Rank'].values
 
