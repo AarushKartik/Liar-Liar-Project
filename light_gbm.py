@@ -31,6 +31,7 @@ print(f"✅ X_valid shape: {X_valid.shape}")
 
 # Load labels
 
+df = pd.DataFrame(data)
 labels = df['Label_Rank'].values
 
 # First, split into training (80%) and a temporary set (20%)
