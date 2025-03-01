@@ -39,7 +39,7 @@ dataset_relative_path = 'dataset_file.csv'
 dataset_absolute_path = os.path.abspath(dataset_relative_path)
 
 print("Absolute path to the dataset:", dataset_absolute_path)
-df = pd.DataFrame(/content/Liar-Liar-Project/dataset_file.csv)
+df = pd.DataFrame (content/Liar-Liar-Project/dataset_file.csv)
 labels = df['Label_Rank'].values
 
 # First, split into training (80%) and a temporary set (20%)
