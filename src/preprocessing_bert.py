@@ -20,6 +20,10 @@ def load_tsv_files(train_file, test_file, valid_file):
     df_train = pd.read_csv(train_file, sep='\t', header=None)
     df_test = pd.read_csv(test_file, sep='\t', header=None)
     df_valid = pd.read_csv(valid_file, sep='\t', header=None)
+
+    df_train.to_csv("saved_train.csv", index=False)
+    df_test.to_csv("saved_test.csv", index=False)
+    df_valid.to_csv("saved_valid.csv", index=False)
     
     return df_train, df_test, df_valid
 
