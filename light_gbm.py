@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the LIAR dataset (assumes it is in TSV format)
-df = pd.read_csv("train_file", sep="\t", header=None)
+df = pd.read_csv("/content/Liar-Liar-Project/train_file", sep="\t", header=None)
 
 # Assign column names based on LIAR dataset
 df.columns = ["statement", "label", "subject", "speaker", "speaker_affiliation", 
