@@ -1,4 +1,4 @@
-import numpy as np
+timport numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -31,7 +31,7 @@ print(f"✅ X_valid shape: {X_valid.shape}")
 
 # Load labels
 
-df = pd.DataFrame(data)
+df = pd.DataFrame(dataset_file)
 labels = df['Label_Rank'].values
 
 # First, split into training (80%) and a temporary set (20%)
