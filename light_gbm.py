@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score, classification_report
 
 # Load precomputed feature vectors for train, test, and valid separately
-bert_train = np.load("feature_vectors/train/bert/bert_train_1_features.npy")  
+bert_train = np.load("/content/drive/My Drive/feature_vectors/train/bert/bert_train_1_features.npy")  
 bert_test = np.load("feature_vectors/test/bert/bert_test_1_features.npy")  
 bert_valid = np.load("feature_vectors/valid/bert/bert_valid_1_features.npy")  
 
