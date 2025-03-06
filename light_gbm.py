@@ -82,8 +82,7 @@ model = lgb.train(
     params,
     train_data,
     valid_sets=[train_data, valid_data],
-    num_boost_round=1000,
-    verbose_eval=50
+    num_boost_round=1000
 )
 
 # Save the trained model
