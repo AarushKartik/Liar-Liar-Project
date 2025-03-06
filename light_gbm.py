@@ -83,7 +83,6 @@ model = lgb.train(
     train_data,
     valid_sets=[train_data, valid_data],
     num_boost_round=1000,
-    early_stopping_rounds=50,
     verbose_eval=50
 )
 
