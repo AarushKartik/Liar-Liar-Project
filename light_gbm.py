@@ -8,7 +8,6 @@ from sklearn.metrics import accuracy_score, classification_report
 import joblib  # For saving/loading the model
 
 # ------------------- Load Precomputed Feature Vectors -------------------
-
 # BERT features
 bert_train = np.load("/content/feature_vectors/train_bert/bert_train_1_features.npy")  
 bert_test = np.load("/content/feature_vectors/test_bert/bert_test_1_features.npy")  
@@ -35,7 +34,6 @@ print(f"✅ X_test shape: {X_test.shape}")
 print(f"✅ X_valid shape: {X_valid.shape}")
 
 # ------------------- Load Labels -------------------
-
 y_train = np.loadtxt("feature_vectors/train/train_labels.txt", dtype=int)
 y_test = np.loadtxt("feature_vectors/test/test_labels.txt", dtype=int)
 y_valid = np.loadtxt("feature_vectors/valid/valid_labels.txt", dtype=int)
@@ -46,7 +44,6 @@ print(f"✅ y_test shape: {y_test.shape}")
 print(f"✅ y_valid shape: {y_valid.shape}")
 
 # ------------------- Feature Scaling -------------------
-
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
@@ -56,8 +53,35 @@ X_valid = scaler.transform(X_valid)
 joblib.dump(scaler, "scaler.pkl")
 print("✅ Feature scaling complete and scaler saved.")
 
-# ------------------- Train LightGBM Model -------------------
+# ------------------- Define Custom Callback for Accuracy Reporting -------------------
+def accuracy_eval_callback(period=100):
+    """
+    Custom callback to report training and validation accuracies during LightGBM training.
+    
+    Args:
+        period (int): Interval (in iterations) to compute and print accuracies
+    """
+    def callback(env):
+        if env.iteration % period == 0:
+            # Get current model
+            model = env.model
+            
+            # Predict on training data
+            y_train_pred = model.predict(X_train)
+            y_train_pred_labels = np.argmax(y_train_pred, axis=1)
+            train_acc = accuracy_score(y_train, y_train_pred_labels)
+            
+            # Predict on validation data
+            y_valid_pred = model.predict(X_valid)
+            y_valid_pred_labels = np.argmax(y_valid_pred, axis=1)
+            valid_acc = accuracy_score(y_valid, y_valid_pred_labels)
+            
+            print(f"Iteration {env.iteration}: Train Accuracy: {train_acc:.4f}, Validation Accuracy: {valid_acc:.4f}")
+    
+    callback.order = 0
+    return callback
 
+# ------------------- Train LightGBM Model -------------------
 # Define the LightGBM dataset
 train_data = lgb.Dataset(X_train, label=y_train)
 valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
@@ -76,13 +100,15 @@ params = {
     'seed': 42
 }
 
-# Train the LightGBM model
+# Train the LightGBM model with custom callback and 2000 rounds (twice as long)
 print("🚀 Training LightGBM model...")
 model = lgb.train(
     params,
     train_data,
     valid_sets=[train_data, valid_data],
-    num_boost_round=1000
+    valid_names=['train', 'valid'],
+    num_boost_round=2000,  # Train for twice as long (2000 instead of 1000)
+    callbacks=[accuracy_eval_callback(period=100)]  # Report accuracies every 100 iterations
 )
 
 # Save the trained model
@@ -90,7 +116,6 @@ joblib.dump(model, "lightgbm_model.pkl")
 print("✅ Model training complete and saved.")
 
 # ------------------- Model Evaluation -------------------
-
 # Load trained model (to ensure we can reload it)
 model = joblib.load("lightgbm_model.pkl")
 
