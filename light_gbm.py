@@ -39,8 +39,9 @@ def perform_kfold_cv(X, y, params, n_splits=5):
             train_data,
             valid_sets=[val_data],
             num_boost_round=500,
-            early_stopping_rounds=50,
-            verbose_eval=False
+            callbacks=[
+                lgb.early_stopping(stopping_rounds=50, verbose=False)
+            ]
         )
         
         # Predict
