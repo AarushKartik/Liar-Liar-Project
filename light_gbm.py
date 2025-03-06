@@ -36,11 +36,11 @@ print(f"✅ X_valid shape: {X_valid.shape}")
 
 # ------------------- Load Labels -------------------
 
-# Load labels if not already loaded
-y_train = np.load("labels_train.npy")
-y_test = np.load("labels_test.npy")
-y_valid = np.load("labels_valid.npy")
+y_train = np.loadtxt("feature_vectors/train/train_labels.txt", dtype=int)
+y_test = np.loadtxt("feature_vectors/test/test_labels.txt", dtype=int)
+y_valid = np.loadtxt("feature_vectors/valid/valid_labels.txt", dtype=int)
 
+# Print to verify shapes
 print(f"✅ y_train shape: {y_train.shape}")
 print(f"✅ y_test shape: {y_test.shape}")
 print(f"✅ y_valid shape: {y_valid.shape}")
