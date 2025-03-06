@@ -33,7 +33,7 @@ def save_labels_to_file(labels, split_name="train", data_num="1"):
     os.makedirs(out_dir, exist_ok=True)
     
     # Save labels in .txt format
-    txt_path = os.path.join(out_dir, f"{split_name}_{data_num}_labels.txt")
+    txt_path = os.path.join(out_dir, f"{split_name}_labels.txt")
     
     # Convert labels to numpy array if not already
     if not isinstance(labels, np.ndarray):
