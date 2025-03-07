@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 import json
 import warnings
+import GPUtil
 warnings.filterwarnings('ignore')
 
 # ------------------- Define Base Models for Stacking -------------------
@@ -24,12 +25,32 @@ class BaseLGBMModel:
         self.params = params
         self.model = None
         self.feature_name = feature_name
+        
+        # Configure GPU if specified in params
+        if params.get('device_type') == 'gpu':
+            # Ensure GPU-specific parameters are properly set
+            if 'max_bin' not in params:
+                params['max_bin'] = 63  # Lower bin size for GPU
+            if 'gpu_use_dp' not in params:
+                params['gpu_use_dp'] = True  # Double precision for accuracy
     
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
         train_data = lgb.Dataset(X_train, label=y_train)
         valid_data = None
         if X_valid is not None and y_valid is not None:
             valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
+        
+        # Print GPU usage info if using GPU
+        if self.params.get('device_type') == 'gpu':
+            try:
+                gpus = GPUtil.getGPUs()
+                if gpus:
+                    for i, gpu in enumerate(gpus):
+                        if i == self.params.get('gpu_device_id', 0):
+                            print(f"  Training on GPU {i}: {gpu.name}")
+                            print(f"  GPU Memory Usage: {gpu.memoryUsed}MB / {gpu.memoryTotal}MB ({gpu.memoryUsed/gpu.memoryTotal*100:.1f}%)")
+            except:
+                print("  ⚠️ Could not retrieve GPU info but continuing with GPU training")
         
         evals_result = {}
         self.model = lgb.train(
@@ -231,6 +252,21 @@ def evaluate_params(param_set, X, y, n_splits=5):
     kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     accuracies = []
     
+    # Configure LightGBM for GPU usage if specified
+    is_gpu = param_set.get('device_type', '') == 'gpu'
+    if is_gpu:
+        # Make a copy of params to avoid modifying the original
+        gpu_params = param_set.copy()
+        
+        # Additional GPU optimizations
+        if 'max_bin' not in gpu_params:
+            gpu_params['max_bin'] = 63  # Lower bin size works better for GPU
+        if 'gpu_use_dp' not in gpu_params:
+            gpu_params['gpu_use_dp'] = True  # Double precision for accuracy
+        
+        # Apply GPU params
+        param_set = gpu_params
+    
     for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
         X_train_fold, X_val_fold = X[train_idx], X[val_idx]
         y_train_fold, y_val_fold = y[train_idx], y[val_idx]
@@ -284,6 +320,34 @@ def grid_search_parallel(param_grid, X, y, n_splits=5, n_jobs=-1):
     Returns:
         List of results sorted by mean accuracy
     """
+    # Check if we're using GPU and adjust parallelization
+    is_gpu = 'device_type' in param_grid and 'gpu' in param_grid['device_type']
+    
+    # If using GPU, limit parallelization to avoid CUDA memory issues
+    if is_gpu:
+        available_gpus = 0
+        try:
+            gpus = GPUtil.getGPUs()
+            available_gpus = len(gpus)
+            
+            if available_gpus > 0:
+                print(f"Found {available_gpus} GPU(s) for parallelization.")
+                if n_jobs == -1 or n_jobs > available_gpus:
+                    n_jobs = available_gpus
+                    print(f"Limiting parallel jobs to {n_jobs} to match GPU count.")
+            else:
+                print("No GPUs found, falling back to CPU parallelization.")
+                # Reset device_type to CPU
+                param_grid['device_type'] = ['cpu']
+                if 'gpu_platform_id' in param_grid:
+                    del param_grid['gpu_platform_id']
+                if 'gpu_device_id' in param_grid:
+                    del param_grid['gpu_device_id']
+                if 'gpu_use_dp' in param_grid:
+                    del param_grid['gpu_use_dp']
+        except:
+            print("Error detecting GPUs, proceeding with requested parallelization.")
+    
     # Generate all parameter combinations
     param_combinations = []
     
@@ -345,6 +409,39 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
     print(f"Results will be saved to: {output_dir}")
     
+    # Check for available GPUs
+    try:
+        gpus = GPUtil.getGPUs()
+        if gpus:
+            print(f"\n🔍 Found {len(gpus)} GPU(s):")
+            for i, gpu in enumerate(gpus):
+                print(f"  GPU {i}: {gpu.name}, Memory: {gpu.memoryTotal}MB, Load: {gpu.load*100:.1f}%")
+        else:
+            print("\n⚠️ No GPUs detected! Will fall back to CPU.")
+            # If no GPUs, adjust parameters to use CPU
+            for grid in [base_param_grid, reduced_param_grid, meta_param_grid, reduced_meta_param_grid]:
+                if 'device_type' in grid:
+                    grid['device_type'] = ['cpu']
+                    # Remove GPU-specific parameters
+                    for param in ['gpu_platform_id', 'gpu_device_id', 'gpu_use_dp']:
+                        if param in grid:
+                            del grid[param]
+    except:
+        print("\n⚠️ Error detecting GPUs. Will proceed with GPU parameters, but verify your environment.")
+        
+    # Configure LightGBM GPU parameters
+    # LightGBM GPU optimization guide: https://lightgbm.readthedocs.io/en/latest/GPU-Tutorial.html
+    if os.environ.get('CUDA_VISIBLE_DEVICES') is None:
+        if gpus:
+            os.environ['CUDA_VISIBLE_DEVICES'] = '0'  # Use first GPU by default
+            print(f"Setting CUDA_VISIBLE_DEVICES to '0'")
+        
+    # Print GPU memory info for debugging
+    if 'gpus' in locals() and gpus:
+        for i, gpu in enumerate(gpus):
+            memory_used_percent = gpu.memoryUsed / gpu.memoryTotal * 100
+            print(f"  GPU {i} Memory Usage: {gpu.memoryUsed}MB / {gpu.memoryTotal}MB ({memory_used_percent:.1f}%)")
+    
     # ------------------- Load Feature Vectors -------------------
     print("\n🔍 Loading feature vectors...")
     
@@ -393,7 +490,11 @@ if __name__ == "__main__":
         'lambda_l2': [0.0, 0.5, 1.0],
         'feature_fraction': [0.7, 0.8, 0.9],
         'bagging_fraction': [0.7, 0.8, 0.9],
-        'bagging_freq': [1, 5]
+        'bagging_freq': [1, 5],
+        # GPU acceleration parameters
+        'device_type': ['gpu'],
+        'gpu_platform_id': [0],
+        'gpu_device_id': [0]
     }
     
     # To make the example simpler, let's use a subset of the grid
@@ -407,7 +508,14 @@ if __name__ == "__main__":
         'lambda_l2': [0.5],
         'feature_fraction': [0.8],
         'bagging_fraction': [0.8],
-        'bagging_freq': [5]
+        'bagging_freq': [5],
+        # GPU acceleration parameters
+        'device_type': ['gpu'],
+        'gpu_platform_id': [0],
+        'gpu_device_id': [0],
+        # GPU-specific optimizations
+        'max_bin': [63],  # Lower for GPU
+        'gpu_use_dp': [True]  # Use double precision for accuracy
     }
     
     print("Running grid search for BERT features...")
@@ -458,7 +566,10 @@ if __name__ == "__main__":
         'lambda_l2': [0.0, 0.5, 1.0],
         'feature_fraction': [0.7, 0.8, 0.9],
         'bagging_fraction': [0.7, 0.8, 0.9],
-        'bagging_freq': [1, 5, 10]
+        'bagging_freq': [1, 5, 10],
+        'device_type': ['gpu'],
+        'gpu_platform_id': [0],
+        'gpu_device_id': [0]
     }
     
     # For simplicity in this example, use a smaller grid
@@ -472,7 +583,13 @@ if __name__ == "__main__":
         'lambda_l2': [0.5],
         'feature_fraction': [0.8],
         'bagging_fraction': [0.8],
-        'bagging_freq': [5]
+        'bagging_freq': [5],
+        # GPU acceleration parameters
+        'device_type': ['gpu'],
+        'gpu_platform_id': [0],
+        'gpu_device_id': [0],
+        'max_bin': [63],  # Optimized for GPU
+        'gpu_use_dp': [True]  # Use double precision
     }
     
     # ------------------- Create and Train Stacking Ensemble -------------------
