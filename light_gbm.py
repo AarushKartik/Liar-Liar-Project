@@ -3,7 +3,6 @@ import pandas as pd
 import os
 import lightgbm as lgb
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -46,52 +45,35 @@ X_valid = scaler.transform(X_valid)
 joblib.dump(scaler, "scaler.pkl")
 print("✅ Feature scaling complete and scaler saved.")
 
-# ------------------- GridSearchCV Setup -------------------
+# ------------------- Train LightGBM Model -------------------
+# Define LightGBM model with fixed hyperparameters
+# These are reasonable default values, but you might want to adjust them based on your specific needs
+lgb_model = lgb.LGBMClassifier(
+    objective='multiclass',
+    num_class=len(np.unique(y_train)),
+    learning_rate=0.05,
+    num_leaves=31,
+    max_depth=5,
+    min_data_in_leaf=50,
+    lambda_l1=0.5,
+    lambda_l2=0.5,
+    feature_fraction=0.9,
+    bagging_fraction=0.9,
+    bagging_freq=5,
+    verbosity=-1
+)
 
-# Define LightGBM model
-lgb_model = lgb.LGBMClassifier(objective='multiclass', num_class=len(np.unique(y_train)), verbosity=-1)
+# Train the model with the training data
+print("\n🚀 Training LightGBM model...")
+lgb_model.fit(X_train, y_train)
 
-# Define hyperparameters for grid search
-param_grid = {
-    'learning_rate': [0.01, 0.05, 0.1],
-    'num_leaves': [20, 31, 40],
-    'max_depth': [3, 5, 7],
-    'min_data_in_leaf': [20, 50, 100],
-    'lambda_l1': [0, 0.5],
-    'lambda_l2': [0, 0.5],
-    'feature_fraction': [0.8, 0.9],
-    'bagging_fraction': [0.8, 0.9],
-    'bagging_freq': [5, 10]
-}
-
-# Setup GridSearchCV with 5-fold cross-validation, parallel execution (n_jobs=-1)
-grid_search = GridSearchCV(lgb_model, param_grid, scoring='accuracy', n_jobs=-1, cv=5, verbose=2)
-
-# Perform grid search
-print("\n🔍 Running GridSearchCV to find the best parameters...")
-grid_search.fit(X_train, y_train)
-
-# Get the best parameters and the corresponding score
-best_params = grid_search.best_params_
-best_score = grid_search.best_score_
-
-print(f"✅ Best Hyperparameters: {best_params}")
-print(f"✅ Best Cross-Validation Accuracy: {best_score:.4f}")
-
-# ------------------- Train with Best Hyperparameters -------------------
-# Use the best parameters from GridSearchCV
-best_model = grid_search.best_estimator_
-
-# Train the model with the full training data
-best_model.fit(X_train, y_train)
-
-# Save the best model
-joblib.dump(best_model, "best_lightgbm_model.pkl")
-print("✅ Best model trained and saved.")
+# Save the trained model
+joblib.dump(lgb_model, "lightgbm_model.pkl")
+print("✅ Model trained and saved.")
 
 # ------------------- Model Evaluation -------------------
-# Load the trained model
-model = joblib.load("best_lightgbm_model.pkl")
+# Load the trained model (optional, since we already have it in memory, but included for consistency)
+model = joblib.load("lightgbm_model.pkl")
 
 # Predict on all datasets to compare performance
 y_train_pred = model.predict(X_train)
