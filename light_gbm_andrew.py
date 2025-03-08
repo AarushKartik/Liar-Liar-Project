@@ -27,25 +27,25 @@ class BaseLGBMModel:
         self.feature_name = feature_name
     
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
-    train_data = lgb.Dataset(X_train, label=y_train)
+        train_data = lgb.Dataset(X_train, label=y_train)
     
-    # Set up validation datasets
-    valid_sets = [train_data]
-    valid_names = ['train']
-    
-    if X_valid is not None and y_valid is not None:
-        valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
-        valid_sets.append(valid_data)
-        valid_names.append('valid')
-    
-    # Train without early stopping
-    self.model = lgb.train(
-        self.params,
-        train_data,
-        num_boost_round=200,  # Fixed number of boosting rounds
-        valid_sets=valid_sets,
-        valid_names=valid_names
-    )
+        # Set up validation datasets
+        valid_sets = [train_data]
+        valid_names = ['train']
+        
+        if X_valid is not None and y_valid is not None:
+            valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
+            valid_sets.append(valid_data)
+            valid_names.append('valid')
+        
+        # Train without early stopping
+        self.model = lgb.train(
+            self.params,
+            train_data,
+            num_boost_round=200,  # Fixed number of boosting rounds
+            valid_sets=valid_sets,
+            valid_names=valid_names
+        )
     
     return self
     
