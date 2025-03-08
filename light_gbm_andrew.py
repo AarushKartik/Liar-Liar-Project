@@ -372,10 +372,19 @@ def apply_pca_to_features(features, n_components=100):
     """Apply PCA to reduce feature dimensionality"""
     scaler = StandardScaler()
     features_scaled = scaler.fit_transform(features)
-    pca = PCA(n_components=n_components)
+    
+    # Get the maximum possible number of components
+    max_components = min(features.shape[0], features.shape[1])
+    
+    # Adjust n_components if necessary
+    actual_components = min(n_components, max_components)
+    if actual_components < n_components:
+        print(f"Warning: Requested {n_components} components, but only {actual_components} are available.")
+    
+    pca = PCA(n_components=actual_components)
     features_pca = pca.fit_transform(features_scaled)
     explained_variance = np.sum(pca.explained_variance_ratio_) * 100
-    print(f"Explained variance with {n_components} components: {explained_variance:.2f}%")
+    print(f"Explained variance with {actual_components} components: {explained_variance:.2f}%")
     return features_pca, pca, scaler
 
 # ------------------- Main Script -------------------
