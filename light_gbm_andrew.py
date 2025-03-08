@@ -123,13 +123,13 @@ class StackingEnsemble:
         meta_features = np.hstack(oof_preds)
         return meta_features
         
-    def _get_test_meta_features(self, X_test):
-        """Generate meta-features for test data"""
+    def _get_test_meta_features(self, X, X_test, y):
+    """Generate meta-features for test data"""
         test_meta_features = []
         
         for i, model in enumerate(self.base_models):
             print(f"Training full {model.feature_name} model for test prediction...")
-            X_current = X[i]  # Get features for current model
+            X_current = X[i]  # Now X is properly passed as a parameter
             
             # Scale features using the corresponding scaler
             X_current_scaled = self.scalers[i].transform(X_current)
@@ -140,9 +140,8 @@ class StackingEnsemble:
             X_test_pca = self.pcas[i].transform(X_test_scaled)
             
             # Train on full data and predict on test
-            # No early stopping for the final model as we train on the full dataset
             model_clone = BaseLGBMModel(model.params, model.feature_name)
-            model_clone.train(X_current_pca, y)  # No validation data needed for final model
+            model_clone.train(X_current_pca, y)
             test_preds = model_clone.predict_proba(X_test_pca)
             test_meta_features.append(test_preds)
         
@@ -189,10 +188,11 @@ class StackingEnsemble:
         )
         
         # Generate test meta-features if provided
+        # Generate test meta-features if provided
         self.test_meta_features = None
         if X_test is not None:
             print("Generating test meta-features...")
-            self.test_meta_features = self._get_test_meta_features(X_test)
+            self.test_meta_features = self._get_test_meta_features(X, X_test, y)
             print(f"Test meta-features shape: {self.test_meta_features.shape}")
         
         return self
@@ -207,7 +207,9 @@ class StackingEnsemble:
         """
         if X is not None:
             # Generate meta-features from X
-            meta_features = self._get_test_meta_features(X)
+            # Note: we can't call this because we don't have y labels for prediction
+            # meta_features = self._get_test_meta_features(X)
+            raise ValueError("Prediction on new data not implemented. Use pre-computed test meta-features.")
         elif self.test_meta_features is not None:
             # Use pre-computed test meta-features
             meta_features = self.test_meta_features
@@ -215,7 +217,6 @@ class StackingEnsemble:
             raise ValueError("No test meta-features available")
         
         return self.meta_model.predict(meta_features)
-    
     def save(self, path_prefix):
         """Save all models, scalers and PCAs"""
         # Save meta-model
