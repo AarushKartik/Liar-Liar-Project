@@ -5,6 +5,7 @@ import lightgbm as lgb
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
@@ -41,7 +42,7 @@ class BaseLGBMModel:
             train_data,
             valid_sets=valid_sets if valid_sets else None,
             valid_names=valid_names if valid_names else None,
-            num_boost_round=500
+            num_boost_round=200  # Reduced from 500 to 200
         )
         return self
 
@@ -67,8 +68,9 @@ class StackingEnsemble:
         self.meta_model_params = meta_model_params
         self.meta_model = None
         self.scalers = []  # Store one scaler per base model
+        self.pcas = []     # Store one PCA per base model
     
-    def _get_oof_predictions(self, X, y, n_splits=5):
+    def _get_oof_predictions(self, X, y, n_splits=3):  # Reduced from 5 to 3 folds
         """Generate out-of-fold predictions for training the meta-learner"""
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
         oof_preds = []
@@ -78,8 +80,9 @@ class StackingEnsemble:
             X_current = X[i]  # Get features for current model
             oof_pred = np.zeros((X_current.shape[0], len(np.unique(y))))
             
-            # Create a scaler for this model's features
+            # Create a scaler and PCA for this model's features
             self.scalers.append(StandardScaler())
+            self.pcas.append(PCA(n_components=100))  # Apply PCA to reduce dimensionality to 100
             
             for fold, (train_idx, val_idx) in enumerate(kf.split(X_current, y)):
                 print(f"Processing fold {fold+1}/{n_splits}")
@@ -89,6 +92,10 @@ class StackingEnsemble:
                 # Scale features
                 X_train_fold = self.scalers[i].fit_transform(X_train_fold)
                 X_val_fold = self.scalers[i].transform(X_val_fold)
+                
+                # Apply PCA
+                X_train_fold = self.pcas[i].fit_transform(X_train_fold)
+                X_val_fold = self.pcas[i].transform(X_val_fold)
                 
                 # Train model
                 model_clone = BaseLGBMModel(model.params, model.feature_name)
@@ -115,17 +122,21 @@ class StackingEnsemble:
             X_current_scaled = self.scalers[i].transform(X_current)
             X_test_scaled = self.scalers[i].transform(X_test[i])
             
+            # Apply PCA
+            X_current_pca = self.pcas[i].transform(X_current_scaled)
+            X_test_pca = self.pcas[i].transform(X_test_scaled)
+            
             # Train on full data and predict on test
             model_clone = BaseLGBMModel(model.params, model.feature_name)
-            model_clone.train(X_current_scaled, y)
-            test_preds = model_clone.predict_proba(X_test_scaled)
+            model_clone.train(X_current_pca, y)
+            test_preds = model_clone.predict_proba(X_test_pca)
             test_meta_features.append(test_preds)
         
         # Combine all test predictions
         test_meta_features = np.hstack(test_meta_features)
         return test_meta_features
     
-    def train(self, X, y, X_test=None, n_splits=5):
+    def train(self, X, y, X_test=None, n_splits=3):  # Reduced from 5 to 3 folds
         """
         Train the stacking ensemble
         
@@ -150,8 +161,8 @@ class StackingEnsemble:
         self.meta_model = lgb.train(
             self.meta_model_params,
             meta_train_data,
-            num_boost_round=1000,
-            callbacks=[lgb.early_stopping(stopping_rounds=100, verbose=False)]
+            num_boost_round=200,  # Reduced from 1000 to 200
+            callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]  # Reduced from 100 to 50
         )
         
         # Generate test meta-features if provided
@@ -183,7 +194,7 @@ class StackingEnsemble:
         return self.meta_model.predict(meta_features)
     
     def save(self, path_prefix):
-        """Save all models and scalers"""
+        """Save all models, scalers and PCAs"""
         # Save meta-model
         meta_model_path = f"{path_prefix}_meta_model.pkl"
         joblib.dump(self.meta_model, meta_model_path)
@@ -191,6 +202,10 @@ class StackingEnsemble:
         # Save scalers
         scaler_path = f"{path_prefix}_scalers.pkl"
         joblib.dump(self.scalers, scaler_path)
+        
+        # Save PCAs
+        pca_path = f"{path_prefix}_pcas.pkl"
+        joblib.dump(self.pcas, pca_path)
         
         # Save test meta-features if available
         if self.test_meta_features is not None:
@@ -200,7 +215,7 @@ class StackingEnsemble:
         print(f"Ensemble saved with prefix: {path_prefix}")
     
     def load(self, path_prefix):
-        """Load all models and scalers"""
+        """Load all models, scalers and PCAs"""
         # Load meta-model
         meta_model_path = f"{path_prefix}_meta_model.pkl"
         self.meta_model = joblib.load(meta_model_path)
@@ -208,6 +223,10 @@ class StackingEnsemble:
         # Load scalers
         scaler_path = f"{path_prefix}_scalers.pkl"
         self.scalers = joblib.load(scaler_path)
+        
+        # Load PCAs
+        pca_path = f"{path_prefix}_pcas.pkl"
+        self.pcas = joblib.load(pca_path)
         
         # Try to load test meta-features
         test_meta_features_path = f"{path_prefix}_test_meta_features.npy"
@@ -218,7 +237,7 @@ class StackingEnsemble:
         return self
 
 # ------------------- Parallelized Grid Search with CV -------------------
-def evaluate_params(param_set, X, y, n_splits=5):
+def evaluate_params(param_set, X, y, n_splits=3):  # Reduced from 5 to 3 folds
     """
     Evaluate a parameter set using k-fold cross-validation
     
@@ -234,14 +253,15 @@ def evaluate_params(param_set, X, y, n_splits=5):
     kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
     accuracies = []
     
-    for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-        X_train_fold, X_val_fold = X[train_idx], X[val_idx]
+    # Apply PCA once for all folds
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    pca = PCA(n_components=100)  # Reduce dimensionality to 100
+    X_pca = pca.fit_transform(X_scaled)
+    
+    for fold, (train_idx, val_idx) in enumerate(kf.split(X_pca, y)):
+        X_train_fold, X_val_fold = X_pca[train_idx], X_pca[val_idx]
         y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-        
-        # Create and scale data
-        scaler = StandardScaler()
-        X_train_fold = scaler.fit_transform(X_train_fold)
-        X_val_fold = scaler.transform(X_val_fold)
         
         train_data = lgb.Dataset(X_train_fold, label=y_train_fold)
         val_data = lgb.Dataset(X_val_fold, label=y_val_fold, reference=train_data)
@@ -251,8 +271,8 @@ def evaluate_params(param_set, X, y, n_splits=5):
             param_set,
             train_data,
             valid_sets=[val_data],
-            num_boost_round=500,
-            callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]
+            num_boost_round=200,  # Reduced from 500 to 200
+            callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)]  # Reduced from 50 to 30
         )
         
         # Predict
@@ -273,7 +293,7 @@ def evaluate_params(param_set, X, y, n_splits=5):
         'std_accuracy': std_acc
     }
 
-def grid_search_parallel(param_grid, X, y, n_splits=5, n_jobs=-1):
+def grid_search_parallel(param_grid, X, y, n_splits=3, n_jobs=2):  # Reduced from 5 to 3 folds, limited to 2 jobs
     """
     Perform grid search with parallelization
     
@@ -282,7 +302,7 @@ def grid_search_parallel(param_grid, X, y, n_splits=5, n_jobs=-1):
         X: Feature matrix
         y: Target labels
         n_splits: Number of folds
-        n_jobs: Number of parallel jobs (-1 for all cores)
+        n_jobs: Number of parallel jobs
         
     Returns:
         List of results sorted by mean accuracy
@@ -323,7 +343,7 @@ def grid_search_parallel(param_grid, X, y, n_splits=5, n_jobs=-1):
     
     # Evaluate each parameter combination in parallel
     start_time = time.time()
-    results = Parallel(n_jobs=n_jobs)(
+    results = Parallel(n_jobs=n_jobs)(  # Limited to 2 jobs
         delayed(evaluate_params)(params, X, y, n_splits) for params in param_combinations
     )
     
@@ -336,10 +356,21 @@ def grid_search_parallel(param_grid, X, y, n_splits=5, n_jobs=-1):
     
     return results
 
+# ------------------- Apply PCA to features -------------------
+def apply_pca_to_features(features, n_components=100):
+    """Apply PCA to reduce feature dimensionality"""
+    scaler = StandardScaler()
+    features_scaled = scaler.fit_transform(features)
+    pca = PCA(n_components=n_components)
+    features_pca = pca.fit_transform(features_scaled)
+    explained_variance = np.sum(pca.explained_variance_ratio_) * 100
+    print(f"Explained variance with {n_components} components: {explained_variance:.2f}%")
+    return features_pca, pca, scaler
+
 # ------------------- Main Script -------------------
 
 if __name__ == "__main__":
-    print("Starting enhanced LightGBM stacking ensemble with parallelized grid search...")
+    print("Starting optimized LightGBM stacking ensemble with PCA and reduced parameter search...")
     start_time = time.time()
     
     # Create a timestamped output directory
@@ -371,6 +402,40 @@ if __name__ == "__main__":
     print(f"✅ RoBERTa train shape: {roberta_train.shape}")
     print(f"✅ BiLSTM train shape: {bilstm_train.shape}")
     
+    # ------------------- Apply PCA to reduce dimensionality -------------------
+    print("\n🔍 Applying PCA to reduce feature dimensionality...")
+    
+    # Apply PCA to BERT features
+    print("Applying PCA to BERT features...")
+    bert_train_pca, bert_pca, bert_scaler = apply_pca_to_features(bert_train, n_components=100)
+    bert_test_pca = bert_pca.transform(bert_scaler.transform(bert_test))
+    bert_valid_pca = bert_pca.transform(bert_scaler.transform(bert_valid))
+    
+    # Apply PCA to RoBERTa features
+    print("Applying PCA to RoBERTa features...")
+    roberta_train_pca, roberta_pca, roberta_scaler = apply_pca_to_features(roberta_train, n_components=100)
+    roberta_test_pca = roberta_pca.transform(roberta_scaler.transform(roberta_test))
+    roberta_valid_pca = roberta_pca.transform(roberta_scaler.transform(roberta_valid))
+    
+    # Apply PCA to BiLSTM features
+    print("Applying PCA to BiLSTM features...")
+    bilstm_train_pca, bilstm_pca, bilstm_scaler = apply_pca_to_features(bilstm_train, n_components=100)
+    bilstm_test_pca = bilstm_pca.transform(bilstm_scaler.transform(bilstm_test))
+    bilstm_valid_pca = bilstm_pca.transform(bilstm_scaler.transform(bilstm_valid))
+    
+    # Save PCA and scalers
+    joblib.dump(bert_pca, f"{output_dir}/bert_pca.pkl")
+    joblib.dump(bert_scaler, f"{output_dir}/bert_scaler.pkl")
+    joblib.dump(roberta_pca, f"{output_dir}/roberta_pca.pkl")
+    joblib.dump(roberta_scaler, f"{output_dir}/roberta_scaler.pkl")
+    joblib.dump(bilstm_pca, f"{output_dir}/bilstm_pca.pkl")
+    joblib.dump(bilstm_scaler, f"{output_dir}/bilstm_scaler.pkl")
+    
+    # Print reduced dimensions
+    print(f"✅ BERT PCA train shape: {bert_train_pca.shape}")
+    print(f"✅ RoBERTa PCA train shape: {roberta_train_pca.shape}")
+    print(f"✅ BiLSTM PCA train shape: {bilstm_train_pca.shape}")
+    
     # ------------------- Load Labels -------------------
     print("\n🔍 Loading labels...")
     y_train = np.loadtxt("/content/drive/MyDrive/feature_vectors/train/train_labels.txt", dtype=int)
@@ -383,50 +448,36 @@ if __name__ == "__main__":
     print(f"✅ y_valid shape: {y_valid.shape}")
     
     # ------------------- Grid Search for Base Models -------------------
-    print("\n🔍 Starting grid search for base models...")
+    print("\n🔍 Starting grid search for base models with reduced parameter space...")
     
-    # Define parameter grid for base models
-    base_param_grid = {
-        'boosting_type': ['gbdt', 'dart'],
-        'learning_rate': [0.01, 0.05],
-        'num_leaves': [15, 20, 30],
-        'max_depth': [4, 5, 6],
-        'min_data_in_leaf': [20, 50],
-        'lambda_l1': [0.0, 0.5, 1.0],
-        'lambda_l2': [0.0, 0.5, 1.0],
-        'feature_fraction': [0.7, 0.8, 0.9],
-        'bagging_fraction': [0.7, 0.8, 0.9],
-        'bagging_freq': [1, 5]
-    }
-    
-    # To make the example simpler, let's use a subset of the grid
-    reduced_param_grid = {
-        'boosting_type': ['gbdt'],
-        'learning_rate': [0.01, 0.05],
-        'num_leaves': [20, 30],
-        'max_depth': [5],
-        'min_data_in_leaf': [50],
-        'lambda_l1': [0.5],
-        'lambda_l2': [0.5],
-        'feature_fraction': [0.8],
-        'bagging_fraction': [0.8],
-        'bagging_freq': [5]
+    # Significantly reduced parameter grid
+    minimal_param_grid = {
+        'boosting_type': ['gbdt'],  # Only use gbdt
+        'learning_rate': [0.05],    # Only one learning rate
+        'num_leaves': [20],         # Only one num_leaves value
+        'max_depth': [5],           # Only one max_depth value
+        'min_data_in_leaf': [50],   # Only one min_data_in_leaf value
+        'lambda_l1': [0.5],         # Only one lambda_l1 value
+        'lambda_l2': [0.5],         # Only one lambda_l2 value
+        'feature_fraction': [0.8],  # Only one feature_fraction value
+        'bagging_fraction': [0.8],  # Only one bagging_fraction value
+        'bagging_freq': [5]         # Only one bagging_freq value
     }
     
     print("Running grid search for BERT features...")
-    bert_results = grid_search_parallel(reduced_param_grid, bert_train, y_train, n_splits=5, n_jobs=-1)
+    bert_results = grid_search_parallel(minimal_param_grid, bert_train_pca, y_train, n_splits=3, n_jobs=2)
     best_bert_params = bert_results[0]['params']
     print(f"Best BERT parameters: {best_bert_params}")
     print(f"Best BERT accuracy: {bert_results[0]['mean_accuracy']:.4f} ± {bert_results[0]['std_accuracy']:.4f}")
     
     print("\nRunning grid search for RoBERTa features...")
-    roberta_results = grid_search_parallel(reduced_param_grid, roberta_train, y_train, n_splits=5, n_jobs=-1)
+    roberta_results = grid_search_parallel(minimal_param_grid, roberta_train_pca, y_train, n_splits=3, n_jobs=2)
     best_roberta_params = roberta_results[0]['params']
     print(f"Best RoBERTa parameters: {best_roberta_params}")
     print(f"Best RoBERTa accuracy: {roberta_results[0]['mean_accuracy']:.4f} ± {roberta_results[0]['std_accuracy']:.4f}")
     
     print("\nRunning grid search for BiLSTM features...")
-    bilstm_results = grid_search_parallel(reduced_param_grid, bilstm_train, y_train, n_splits=5, n_jobs=-1)
+    bilstm_results = grid_search_parallel(minimal_param_grid, bilstm_train_pca, y_train, n_splits=3, n_jobs=2)
     best_bilstm_params = bilstm_results[0]['params']
     print(f"Best BiLSTM parameters: {best_bilstm_params}")
     print(f"Best BiLSTM accuracy: {bilstm_results[0]['mean_accuracy']:.4f} ± {bilstm_results[0]['std_accuracy']:.4f}")
@@ -434,9 +485,9 @@ if __name__ == "__main__":
     # Save base model grid search results
     with open(f"{output_dir}/base_model_results.json", "w") as f:
         json.dump({
-            "bert": bert_results[:5],
-            "roberta": roberta_results[:5],
-            "bilstm": bilstm_results[:5]
+            "bert": bert_results,
+            "roberta": roberta_results,
+            "bilstm": bilstm_results
         }, f, indent=4, default=str)
     
     # ------------------- Create Base Models with Best Parameters -------------------
@@ -448,49 +499,19 @@ if __name__ == "__main__":
         BaseLGBMModel(best_bilstm_params, "BiLSTM")
     ]
     
-    # ------------------- Grid Search for Meta-Learner -------------------
-    print("\n🔍 Starting grid search for meta-learner...")
-    
-    meta_param_grid = {
-        'boosting_type': ['gbdt'],
-        'learning_rate': [0.01, 0.05, 0.1],
-        'num_leaves': [20, 31, 50],
-        'max_depth': [5, 7, 9],
-        'min_data_in_leaf': [20, 50, 100],
-        'lambda_l1': [0.0, 0.5, 1.0],
-        'lambda_l2': [0.0, 0.5, 1.0],
-        'feature_fraction': [0.7, 0.8, 0.9],
-        'bagging_fraction': [0.7, 0.8, 0.9],
-        'bagging_freq': [1, 5, 10]
-    }
-    
-    # For simplicity in this example, use a smaller grid
-    reduced_meta_param_grid = {
-        'boosting_type': ['gbdt'],
-        'learning_rate': [0.01, 0.05],
-        'num_leaves': [20, 31],
-        'max_depth': [5, 7],
-        'min_data_in_leaf': [50],
-        'lambda_l1': [0.5],
-        'lambda_l2': [0.5],
-        'feature_fraction': [0.8],
-        'bagging_fraction': [0.8],
-        'bagging_freq': [5]
-    }
-    
     # ------------------- Create and Train Stacking Ensemble -------------------
     print("\n🚀 Training stacking ensemble...")
     
-    # Create list of features for each base model
-    X = [bert_train, roberta_train, bilstm_train]
-    X_test = [bert_test, roberta_test, bilstm_test]
-    X_valid = [bert_valid, roberta_valid, bilstm_valid]
+    # Create list of features for each base model (use PCA-reduced features)
+    X = [bert_train_pca, roberta_train_pca, bilstm_train_pca]
+    X_test = [bert_test_pca, roberta_test_pca, bilstm_test_pca]
+    X_valid = [bert_valid_pca, roberta_valid_pca, bilstm_valid_pca]
     
     # Create ensemble with base models
-    ensemble = StackingEnsemble(base_models, best_bert_params)  # Use bert params as default
+    ensemble = StackingEnsemble(base_models, best_bert_params)  # Use bert params as default for meta-learner
     
     # Train ensemble
-    ensemble.train(X, y_train, X_test, n_splits=5)
+    ensemble.train(X, y_train, X_test, n_splits=3)  # Reduced from 5 to 3 folds
     
     # Save ensemble
     ensemble.save(f"{output_dir}/stacking_ensemble")
@@ -524,33 +545,24 @@ if __name__ == "__main__":
     # Train and evaluate BERT model
     print("Evaluating BERT model...")
     bert_model = BaseLGBMModel(best_bert_params, "BERT")
-    scaler = StandardScaler()
-    X_bert_train_scaled = scaler.fit_transform(bert_train)
-    X_bert_test_scaled = scaler.transform(bert_test)
-    bert_model.train(X_bert_train_scaled, y_train)
-    bert_preds = bert_model.predict_proba(X_bert_test_scaled)
+    bert_model.train(bert_train_pca, y_train)
+    bert_preds = bert_model.predict_proba(bert_test_pca)
     bert_pred_labels = np.argmax(bert_preds, axis=1)
     bert_accuracy = accuracy_score(y_test, bert_pred_labels)
     
     # Train and evaluate RoBERTa model
     print("Evaluating RoBERTa model...")
     roberta_model = BaseLGBMModel(best_roberta_params, "RoBERTa")
-    scaler = StandardScaler()
-    X_roberta_train_scaled = scaler.fit_transform(roberta_train)
-    X_roberta_test_scaled = scaler.transform(roberta_test)
-    roberta_model.train(X_roberta_train_scaled, y_train)
-    roberta_preds = roberta_model.predict_proba(X_roberta_test_scaled)
+    roberta_model.train(roberta_train_pca, y_train)
+    roberta_preds = roberta_model.predict_proba(roberta_test_pca)
     roberta_pred_labels = np.argmax(roberta_preds, axis=1)
     roberta_accuracy = accuracy_score(y_test, roberta_pred_labels)
     
     # Train and evaluate BiLSTM model
     print("Evaluating BiLSTM model...")
     bilstm_model = BaseLGBMModel(best_bilstm_params, "BiLSTM")
-    scaler = StandardScaler()
-    X_bilstm_train_scaled = scaler.fit_transform(bilstm_train)
-    X_bilstm_test_scaled = scaler.transform(bilstm_test)
-    bilstm_model.train(X_bilstm_train_scaled, y_train)
-    bilstm_preds = bilstm_model.predict_proba(X_bilstm_test_scaled)
+    bilstm_model.train(bilstm_train_pca, y_train)
+    bilstm_preds = bilstm_model.predict_proba(bilstm_test_pca)
     bilstm_pred_labels = np.argmax(bilstm_preds, axis=1)
     bilstm_accuracy = accuracy_score(y_test, bilstm_pred_labels)
     
