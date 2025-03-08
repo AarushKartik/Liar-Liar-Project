@@ -105,17 +105,23 @@ print("-" * 50)
 for i, (index, row) in enumerate(top_features.iterrows(), 1):
     print(f"{i:2d}   | {row['Feature']:15s} | {row['Model']:7s} | {row['Importance']:.6f}")
 
-# Visualize top 10 features with model color-coding
+# Visualize top 10 features with model color-coding (fixed approach)
 plt.figure(figsize=(12, 6))
-colors = {'BERT': 'blue', 'RoBERTa': 'green', 'BiLSTM': 'red'}
-sns.barplot(
-    x='Importance', 
-    y='Feature', 
-    data=top_features,
-    palette=top_features['Model'].map(colors),
-    hue='Model'
-)
+# Create a color map for the models
+colors = {'BERT': 'royalblue', 'RoBERTa': 'forestgreen', 'BiLSTM': 'crimson'}
+bar_colors = [colors[model] for model in top_features['Model']]
+
+# Create the plot
+bars = plt.barh(top_features['Feature'], top_features['Importance'], color=bar_colors)
+
+# Add a legend
+from matplotlib.patches import Patch
+legend_elements = [Patch(facecolor=colors[model], label=model) for model in colors]
+plt.legend(handles=legend_elements)
+
 plt.title('Top 10 Feature Importance by Model Type')
+plt.xlabel('Importance')
+plt.ylabel('Feature')
 plt.tight_layout()
 plt.savefig('feature_importance.png')
 print("✅ Feature importance visualization saved to 'feature_importance.png'")
@@ -136,14 +142,27 @@ print("-" * 55)
 for _, row in model_summary.iterrows():
     print(f"{row['Model']:7s} | {row['Count']:5d} | {row['Importance']:16.6f} | {row['Percentage']:8.2f}%")
 
-# Visualize model contribution as pie chart
+# Visualize model contribution as pie charts
 plt.figure(figsize=(10, 6))
+
+# Create pie chart for feature count
 plt.subplot(1, 2, 1)
-plt.pie(model_summary['Count'], labels=model_summary['Model'], autopct='%1.1f%%', colors=[colors[m] for m in model_summary['Model']])
+plt.pie(
+    model_summary['Count'], 
+    labels=model_summary['Model'], 
+    autopct='%1.1f%%', 
+    colors=[colors[m] for m in model_summary['Model']]
+)
 plt.title('Feature Count Distribution in Top 10')
 
+# Create pie chart for importance distribution
 plt.subplot(1, 2, 2)
-plt.pie(model_summary['Importance'], labels=model_summary['Model'], autopct='%1.1f%%', colors=[colors[m] for m in model_summary['Model']])
+plt.pie(
+    model_summary['Importance'], 
+    labels=model_summary['Model'], 
+    autopct='%1.1f%%', 
+    colors=[colors[m] for m in model_summary['Model']]
+)
 plt.title('Importance Distribution in Top 10')
 
 plt.tight_layout()
