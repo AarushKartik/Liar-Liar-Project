@@ -249,7 +249,7 @@ class StackingEnsemble:
         return self
 
 # ------------------- Parallelized Grid Search with CV -------------------
-def evaluate_params(param_set, X, y, n_splits=3):  # Reduced from 5 to 3 folds
+def evaluate_params(param_set, X, y, n_splits=3):
     """
     Evaluate a parameter set using k-fold cross-validation
     
@@ -268,7 +268,16 @@ def evaluate_params(param_set, X, y, n_splits=3):  # Reduced from 5 to 3 folds
     # Apply PCA once for all folds
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    pca = PCA(n_components=100)  # Reduce dimensionality to 100
+    
+    # Get the maximum possible number of components
+    max_components = min(X.shape[0], X.shape[1])
+    
+    # Adjust n_components if necessary
+    actual_components = min(100, max_components)  # Original was hardcoded to 100
+    if actual_components < 100:
+        print(f"Warning: Using {actual_components} PCA components instead of 100")
+    
+    pca = PCA(n_components=actual_components)
     X_pca = pca.fit_transform(X_scaled)
     
     for fold, (train_idx, val_idx) in enumerate(kf.split(X_pca, y)):
@@ -283,7 +292,8 @@ def evaluate_params(param_set, X, y, n_splits=3):  # Reduced from 5 to 3 folds
             param_set,
             train_data,
             valid_sets=[val_data],
-            num_boost_round=200  # Reduced from 500 to 200
+            num_boost_round=200,  # Fixed number of rounds
+            # Early stopping removed as requested
         )
         
         # Predict
@@ -303,7 +313,6 @@ def evaluate_params(param_set, X, y, n_splits=3):  # Reduced from 5 to 3 folds
         'mean_accuracy': mean_acc,
         'std_accuracy': std_acc
     }
-
 def grid_search_parallel(param_grid, X, y, n_splits=3, n_jobs=2):  # Reduced from 5 to 3 folds, limited to 2 jobs
     """
     Perform grid search with parallelization
