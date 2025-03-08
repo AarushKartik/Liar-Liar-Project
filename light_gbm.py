@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib  # For saving/loading the model
 from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation as LDA
+import umap.umap_ as umap
+from scipy.spatial.distance import cosine
 
 # ------------------- Load Precomputed Feature Vectors -------------------
 # BERT features
@@ -95,6 +99,11 @@ feature_importance['Model'] = feature_importance['Feature'].apply(
     lambda x: 'BERT' if x.startswith('bert') else ('RoBERTa' if x.startswith('roberta') else 'BiLSTM')
 )
 
+# Add feature index for later analysis
+feature_importance['Index'] = feature_importance['Feature'].apply(
+    lambda x: int(x.split('_')[1])
+)
+
 # Sort by importance and get top 10 features
 top_features = feature_importance.sort_values(by='Importance', ascending=False).head(10)
 
@@ -107,52 +116,214 @@ for i, (index, row) in enumerate(top_features.iterrows(), 1):
 
 # Visualize top 10 features with model color-coding
 plt.figure(figsize=(12, 6))
-colors = {'BERT': 'blue', 'RoBERTa': 'green', 'BiLSTM': 'red'}
-sns.barplot(
-    x='Importance', 
-    y='Feature', 
-    data=top_features,
-    palette=top_features['Model'].map(colors),
-    hue='Model'
-)
+# Create a color map for the models
+colors = {'BERT': 'royalblue', 'RoBERTa': 'forestgreen', 'BiLSTM': 'crimson'}
+bar_colors = [colors[model] for model in top_features['Model']]
+
+# Create the plot
+bars = plt.barh(top_features['Feature'], top_features['Importance'], color=bar_colors)
+
+# Add a legend
+from matplotlib.patches import Patch
+legend_elements = [Patch(facecolor=colors[model], label=model) for model in colors]
+plt.legend(handles=legend_elements)
+
 plt.title('Top 10 Feature Importance by Model Type')
+plt.xlabel('Importance')
+plt.ylabel('Feature')
 plt.tight_layout()
 plt.savefig('feature_importance.png')
 print("✅ Feature importance visualization saved to 'feature_importance.png'")
 
-# Calculate total importance contribution by model
-model_importance = top_features.groupby('Model')['Importance'].sum().reset_index()
-model_importance['Percentage'] = (model_importance['Importance'] / model_importance['Importance'].sum()) * 100
-model_feature_count = top_features['Model'].value_counts().reset_index()
-model_feature_count.columns = ['Model', 'Count']
+# ------------------- Feature Interpretation -------------------
+# Attempt to interpret what each important feature represents
+# This is a simplified approach and will need to be adapted to your specific dataset
 
-# Merge counts and importance
-model_summary = pd.merge(model_importance, model_feature_count, on='Model')
+# 1. Function to load your original text data (adapt this to your data source)
+def load_original_texts():
+    try:
+        # Try to load the original texts from appropriate sources
+        # This is a placeholder - replace with actual loading code
+        print("Attempting to load original text data...")
+        
+        # Example: Load from CSV or text files
+        # texts = pd.read_csv('your_original_texts.csv')['text'].tolist()
+        
+        # For now, we'll simulate with a message
+        print("ℹ️ Original text data not available for direct feature interpretation.")
+        print("ℹ️ Will proceed with feature analysis without direct word mapping.")
+        return None
+    except Exception as e:
+        print(f"Could not load original texts: {e}")
+        return None
 
-# Print overall model importance in top 10
-print("\n📊 Model Contribution in Top 10 Features:")
-print("Model   | Count | Total Importance | Percentage")
-print("-" * 55)
-for _, row in model_summary.iterrows():
-    print(f"{row['Model']:7s} | {row['Count']:5d} | {row['Importance']:16.6f} | {row['Percentage']:8.2f}%")
+# 2. Function to analyze feature representation in embedding space
+def analyze_feature_representation(feature_indices, model_types, embeddings_dict):
+    """
+    Analyze what features might represent by examining feature patterns
+    
+    Args:
+        feature_indices: List of feature indices
+        model_types: List of corresponding model types
+        embeddings_dict: Dictionary with keys 'bert', 'roberta', 'bilstm' 
+                         containing the respective embeddings
+    """
+    results = []
+    
+    # Map to track feature offsets
+    offsets = {
+        'BERT': 0,
+        'RoBERTa': bert_dim,
+        'BiLSTM': bert_dim + roberta_dim
+    }
+    
+    for i, (feature_idx, model_type) in enumerate(zip(feature_indices, model_types)):
+        # Get the appropriate embeddings based on model type
+        if model_type.lower() == 'bert':
+            embedding_matrix = embeddings_dict['bert']
+            true_idx = feature_idx
+        elif model_type.lower() == 'roberta':
+            embedding_matrix = embeddings_dict['roberta']
+            true_idx = feature_idx
+        else:  # BiLSTM
+            embedding_matrix = embeddings_dict['bilstm']
+            true_idx = feature_idx
+        
+        # Extract the feature column values for all training examples
+        feature_values = embedding_matrix[:, true_idx]
+        
+        # Find top examples where this feature is most activated
+        top_examples_idx = np.argsort(feature_values)[-5:][::-1]
+        top_values = feature_values[top_examples_idx]
+        
+        # Find examples where feature is least activated
+        bottom_examples_idx = np.argsort(feature_values)[:5]
+        bottom_values = feature_values[bottom_examples_idx]
+        
+        # Correlation with target variable (simplified analysis)
+        # This helps identify if the feature is associated with specific classes
+        class_means = {}
+        for class_id in np.unique(y_train):
+            class_mask = (y_train == class_id)
+            class_mean = np.mean(feature_values[class_mask])
+            class_means[class_id] = class_mean
+        
+        # Find the class with the highest mean for this feature
+        most_associated_class = max(class_means.items(), key=lambda x: x[1])[0]
+        class_correlation = {cls: val for cls, val in class_means.items()}
+        
+        # Store results
+        feature_interpretation = {
+            'rank': i+1,
+            'feature_name': f"{model_type.lower()}_{feature_idx}",
+            'model_type': model_type,
+            'most_associated_class': most_associated_class,
+            'class_correlations': class_correlation,
+            'top_activation_values': top_values.tolist(),
+            'bottom_activation_values': bottom_values.tolist(),
+            'highest_activated_examples': top_examples_idx.tolist(),
+            'lowest_activated_examples': bottom_examples_idx.tolist(),
+        }
+        
+        results.append(feature_interpretation)
+    
+    return results
 
-# Visualize model contribution as pie chart
-plt.figure(figsize=(10, 6))
-plt.subplot(1, 2, 1)
-plt.pie(model_summary['Count'], labels=model_summary['Model'], autopct='%1.1f%%', colors=[colors[m] for m in model_summary['Model']])
-plt.title('Feature Count Distribution in Top 10')
+# 3. Function to map class IDs to class names (if available)
+def get_class_names():
+    # Replace with actual class names if available
+    # This is a placeholder - modify based on your dataset
+    try:
+        # Try to load class names
+        # class_names = pd.read_csv('class_names.csv')['name'].tolist()
+        # return class_names
+        
+        # For now, we'll simulate with default class names
+        unique_classes = sorted(np.unique(y_train))
+        class_names = {cls_id: f"Class {cls_id}" for cls_id in unique_classes}
+        return class_names
+    except:
+        # Default to generic class names
+        unique_classes = sorted(np.unique(y_train))
+        class_names = {cls_id: f"Class {cls_id}" for cls_id in unique_classes}
+        return class_names
 
-plt.subplot(1, 2, 2)
-plt.pie(model_summary['Importance'], labels=model_summary['Model'], autopct='%1.1f%%', colors=[colors[m] for m in model_summary['Model']])
-plt.title('Importance Distribution in Top 10')
+# 4. Prepare data for feature interpretation
+original_texts = load_original_texts()
+class_names = get_class_names()
 
-plt.tight_layout()
-plt.savefig('model_contribution.png')
-print("✅ Model contribution visualization saved to 'model_contribution.png'")
+# Create embeddings dictionary using unscaled embeddings for better interpretability
+embeddings_dict = {
+    'bert': bert_train,
+    'roberta': roberta_train,
+    'bilstm': bilstm_train
+}
 
-# Save top features to file with detailed info
-top_features.to_csv('top_features.csv', index=False)
-print("✅ Top features saved to 'top_features.csv'")
+# Analyze top features
+feature_interpretations = analyze_feature_representation(
+    top_features['Index'].values,
+    top_features['Model'].values,
+    embeddings_dict
+)
+
+# 5. Print and save feature interpretations
+print("\n📊 Feature Interpretations:")
+print("-" * 60)
+
+interpretation_df = pd.DataFrame()
+for interp in feature_interpretations:
+    print(f"Rank {interp['rank']}: {interp['feature_name']} ({interp['model_type']})")
+    print(f"  Most associated with: {class_names[interp['most_associated_class']]}")
+    
+    # Show class correlations
+    print("  Class associations:")
+    for cls_id, corr in sorted(interp['class_correlations'].items(), key=lambda x: x[1], reverse=True):
+        print(f"    - {class_names[cls_id]}: {corr:.4f}")
+    
+    print(f"  Highest activation: {np.mean(interp['top_activation_values']):.4f}")
+    print(f"  Lowest activation: {np.mean(interp['bottom_activation_values']):.4f}")
+    print("-" * 60)
+    
+    # Save to dataframe for export
+    row = {
+        'Rank': interp['rank'],
+        'Feature': interp['feature_name'],
+        'Model': interp['model_type'],
+        'Most_Associated_Class': class_names[interp['most_associated_class']],
+        'Class_Correlation': str(interp['class_correlations']),
+        'Avg_High_Activation': np.mean(interp['top_activation_values']),
+        'Avg_Low_Activation': np.mean(interp['bottom_activation_values']),
+    }
+    interpretation_df = pd.concat([interpretation_df, pd.DataFrame([row])], ignore_index=True)
+
+# Save interpretations to CSV
+interpretation_df.to_csv('feature_interpretations.csv', index=False)
+print("✅ Feature interpretations saved to 'feature_interpretations.csv'")
+
+# 6. Visualize relationship between top features and classes
+plt.figure(figsize=(12, 8))
+for i, interp in enumerate(feature_interpretations):
+    plt.subplot(2, 5, i+1)
+    class_ids = list(interp['class_correlations'].keys())
+    class_correlations = list(interp['class_correlations'].values())
+    
+    # Sort by correlation value
+    sorted_indices = np.argsort(class_correlations)[::-1]
+    sorted_class_ids = [class_ids[i] for i in sorted_indices]
+    sorted_correlations = [class_correlations[i] for i in sorted_indices]
+    
+    # Plot
+    plt.bar(
+        [class_names[cls_id] for cls_id in sorted_class_ids], 
+        sorted_correlations,
+        color=colors[interp['model_type']]
+    )
+    plt.title(f"{interp['feature_name']}")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+
+plt.savefig('feature_class_associations.png')
+print("✅ Feature-class associations visualization saved to 'feature_class_associations.png'")
 
 # ------------------- Model Evaluation -------------------
 # Load the trained model (optional, since we already have it in memory)
