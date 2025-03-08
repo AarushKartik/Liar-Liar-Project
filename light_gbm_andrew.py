@@ -492,18 +492,18 @@ if __name__ == "__main__":
     print("\n🔍 Starting grid search for base models with reduced parameter space...")
     
     # Significantly reduced parameter grid
-    minimal_param_grid = {
-        'boosting_type': ['gbdt'],  # Only use gbdt
-        'learning_rate': [0.05],    # Only one learning rate
-        'num_leaves': [20],         # Only one num_leaves value
-        'max_depth': [5],           # Only one max_depth value
-        'min_data_in_leaf': [50],   # Only one min_data_in_leaf value
-        'lambda_l1': [0.5],         # Only one lambda_l1 value
-        'lambda_l2': [0.5],         # Only one lambda_l2 value
-        'feature_fraction': [0.8],  # Only one feature_fraction value
-        'bagging_fraction': [0.8],  # Only one bagging_fraction value
-        'bagging_freq': [5]         # Only one bagging_freq value
-    }
+    expanded_param_grid = {
+    'boosting_type': ['gbdt', 'dart'],  # Add 'dart' boosting
+    'learning_rate': [0.01, 0.05, 0.1],  # More learning rate options
+    'num_leaves': [20, 31, 50],  # Explore different tree complexities
+    'max_depth': [5, 7, 9],  # Deeper trees might help
+    'min_data_in_leaf': [20, 50, 100],  # Different min data requirements
+    'lambda_l1': [0.0, 0.5, 1.0],  # L1 regularization options
+    'lambda_l2': [0.0, 0.5, 1.0],  # L2 regularization options
+    'feature_fraction': [0.7, 0.8, 0.9],  # Control feature sampling
+    'bagging_fraction': [0.7, 0.8, 0.9],  # Control bagging sampling
+    'bagging_freq': [2, 5, 10]  # Different bagging frequencies
+}
     
     print("Running grid search for BERT features...")
     bert_results = grid_search_parallel(minimal_param_grid, bert_train_pca, y_train, n_splits=3, n_jobs=2)
