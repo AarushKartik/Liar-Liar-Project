@@ -29,26 +29,34 @@ class BaseLGBMModel:
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
         train_data = lgb.Dataset(X_train, label=y_train)
         
-        valid_sets = [train_data]  # Always include training data as a valid set
+        # Set up validation datasets
+        valid_sets = [train_data]
         valid_names = ['train']
-
+        
         if X_valid is not None and y_valid is not None:
             valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
             valid_sets.append(valid_data)
-            valid_names.append("valid")
-
-        callbacks = None
-        if X_valid is not None and y_valid is not None:
-            callbacks = [lgb.early_stopping(stopping_rounds=50, verbose=False)]
-
-        self.model = lgb.train(
-            self.params,
-            train_data,
-            valid_sets=valid_sets,
-            valid_names=valid_names,
-            num_boost_round=200,  # Reduced from 500 to 200
-            callbacks=callbacks
-        )
+            valid_names.append('valid')
+            
+            # Only use early stopping when validation data is provided
+            self.model = lgb.train(
+                self.params,
+                train_data,
+                valid_sets=valid_sets,
+                valid_names=valid_names,
+                num_boost_round=200,
+                callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]
+            )
+        else:
+            # No early stopping when no validation data
+            self.model = lgb.train(
+                self.params,
+                train_data,
+                num_boost_round=200,
+                valid_sets=valid_sets,
+                valid_names=valid_names
+            )
+        
         return self
     
     def predict_proba(self, X):
@@ -67,7 +75,12 @@ class BaseLGBMModel:
 class StackingEnsemble:
     """Stacking ensemble using LightGBM as meta-learner"""
     
-    # ... [other methods remain the same] ...
+    def __init__(self, base_models, meta_model_params):
+        self.base_models = base_models
+        self.meta_model_params = meta_model_params
+        self.meta_model = None
+        self.scalers = []  # Store one scaler per base model
+        self.pcas = []     # Store one PCA per base model
     
     def _get_oof_predictions(self, X, y, n_splits=3):  # Reduced from 5 to 3 folds
         """Generate out-of-fold predictions for training the meta-learner"""
@@ -96,7 +109,7 @@ class StackingEnsemble:
                 X_train_fold = self.pcas[i].fit_transform(X_train_fold)
                 X_val_fold = self.pcas[i].transform(X_val_fold)
                 
-                # Train model - FIXED: Pass validation data also
+                # Train model - FIXED: Pass validation data
                 model_clone = BaseLGBMModel(model.params, model.feature_name)
                 model_clone.train(X_train_fold, y_train_fold, X_val_fold, y_val_fold)
                 
@@ -126,9 +139,9 @@ class StackingEnsemble:
             X_test_pca = self.pcas[i].transform(X_test_scaled)
             
             # Train on full data and predict on test
-            # We don't need early stopping here as we're training on the full dataset
+            # No early stopping for the final model as we train on the full dataset
             model_clone = BaseLGBMModel(model.params, model.feature_name)
-            model_clone.train(X_current_pca, y)  # No validation set needed for final model
+            model_clone.train(X_current_pca, y)  # No validation data needed for final model
             test_preds = model_clone.predict_proba(X_test_pca)
             test_meta_features.append(test_preds)
         
