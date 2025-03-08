@@ -30,6 +30,18 @@ X_train = np.hstack([bert_train, roberta_train, bilstm_train])
 X_test = np.hstack([bert_test, roberta_test, bilstm_test])
 X_valid = np.hstack([bert_valid, roberta_valid, bilstm_valid])
 
+# Track original feature dimensions for feature importance analysis
+bert_dim = bert_train.shape[1]
+roberta_dim = roberta_train.shape[1]
+bilstm_dim = bilstm_train.shape[1]
+
+# Create feature names for later use in feature importance
+feature_names = (
+    [f"bert_{i}" for i in range(bert_dim)] + 
+    [f"roberta_{i}" for i in range(roberta_dim)] + 
+    [f"bilstm_{i}" for i in range(bilstm_dim)]
+)
+
 # ------------------- Load Labels -------------------
 y_train = np.loadtxt("feature_vectors/train/train_labels.txt", dtype=int)
 y_test = np.loadtxt("feature_vectors/test/test_labels.txt", dtype=int)
@@ -47,7 +59,6 @@ print("✅ Feature scaling complete and scaler saved.")
 
 # ------------------- Train LightGBM Model -------------------
 # Define LightGBM model with fixed hyperparameters
-# These are reasonable default values, but you might want to adjust them based on your specific needs
 lgb_model = lgb.LGBMClassifier(
     objective='multiclass',
     num_class=len(np.unique(y_train)),
@@ -65,14 +76,58 @@ lgb_model = lgb.LGBMClassifier(
 
 # Train the model with the training data
 print("\n🚀 Training LightGBM model...")
-lgb_model.fit(X_train, y_train)
+lgb_model.fit(X_train, y_train, feature_name=feature_names)
 
 # Save the trained model
 joblib.dump(lgb_model, "lightgbm_model.pkl")
 print("✅ Model trained and saved.")
 
+# ------------------- Feature Importance Analysis -------------------
+# Get feature importances from the model
+importance = lgb_model.feature_importances_
+feature_importance = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': importance
+})
+
+# Sort by importance and get top 10 features
+top_features = feature_importance.sort_values(by='Importance', ascending=False).head(10)
+
+# Print top 10 features
+print("\n🔍 Top 10 Most Important Features:")
+for index, row in top_features.iterrows():
+    print(f"{row['Feature']}: {row['Importance']:.6f}")
+
+# Visualize top 10 features
+plt.figure(figsize=(12, 6))
+sns.barplot(x='Importance', y='Feature', data=top_features)
+plt.title('Top 10 Feature Importance')
+plt.tight_layout()
+plt.savefig('feature_importance.png')
+print("✅ Feature importance visualization saved to 'feature_importance.png'")
+
+# Analyze which embedding type contributes most to the top features
+embed_types = ['bert', 'roberta', 'bilstm']
+embed_counts = {embed: 0 for embed in embed_types}
+embed_importance = {embed: 0 for embed in embed_types}
+
+for index, row in top_features.iterrows():
+    feature_name = row['Feature']
+    for embed in embed_types:
+        if feature_name.startswith(embed):
+            embed_counts[embed] += 1
+            embed_importance[embed] += row['Importance']
+
+print("\n📊 Embedding Type Analysis in Top 10 Features:")
+for embed in embed_types:
+    print(f"{embed.upper()}: {embed_counts[embed]} features, Total importance: {embed_importance[embed]:.6f}")
+
+# Save top features to file
+top_features.to_csv('top_features.csv', index=False)
+print("✅ Top features saved to 'top_features.csv'")
+
 # ------------------- Model Evaluation -------------------
-# Load the trained model (optional, since we already have it in memory, but included for consistency)
+# Load the trained model (optional, since we already have it in memory)
 model = joblib.load("lightgbm_model.pkl")
 
 # Predict on all datasets to compare performance
