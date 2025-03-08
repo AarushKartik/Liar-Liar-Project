@@ -492,7 +492,7 @@ if __name__ == "__main__":
     print("\n🔍 Starting grid search for base models with reduced parameter space...")
     
     # Significantly reduced parameter grid
-    expanded_param_grid = {
+    minimal_param_grid = {
     'boosting_type': ['gbdt', 'dart'],  # Add 'dart' boosting
     'learning_rate': [0.01, 0.05, 0.1],  # More learning rate options
     'num_leaves': [20, 31, 50],  # Explore different tree complexities
