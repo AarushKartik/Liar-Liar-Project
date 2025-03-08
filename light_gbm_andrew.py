@@ -124,7 +124,7 @@ class StackingEnsemble:
         return meta_features
         
     def _get_test_meta_features(self, X, X_test, y):
-    """Generate meta-features for test data"""
+        """Generate meta-features for test data"""
         test_meta_features = []
         
         for i, model in enumerate(self.base_models):
