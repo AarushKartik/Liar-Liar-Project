@@ -47,7 +47,7 @@ class BaseLGBMModel:
             valid_names=valid_names
         )
     
-    return self
+        return self
     
     def predict_proba(self, X):
         if self.model is None:
