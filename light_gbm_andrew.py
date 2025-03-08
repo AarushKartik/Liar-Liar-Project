@@ -559,26 +559,36 @@ if __name__ == "__main__":
     
     # ------------------- Evaluate Ensemble -------------------
     print("\n📊 Evaluating ensemble performance...")
-    
-    # Predict on validation and test sets
-    valid_preds = ensemble.predict_proba()
-    valid_pred_labels = np.argmax(valid_preds, axis=1)
-    test_pred_labels = np.argmax(valid_preds, axis=1)  # Use same prediction for test in this example
-    
-    # Calculate accuracies
-    valid_accuracy = accuracy_score(y_valid, valid_pred_labels)
+
+    # Get predictions for test set (which was used during training)
+    test_preds = ensemble.predict_proba()
+    test_pred_labels = np.argmax(test_preds, axis=1)
     test_accuracy = accuracy_score(y_test, test_pred_labels)
-    
-    print(f"Validation Accuracy: {valid_accuracy:.4f}")
     print(f"Test Accuracy: {test_accuracy:.4f}")
     
-    # Generate classification report
-    print("\nClassification Report:")
+    # Now train a separate ensemble for validation predictions
+    print("Training ensemble for validation predictions...")
+    ensemble_valid = StackingEnsemble(base_models, best_bert_params)
+    ensemble_valid.train(X, y_train, X_valid, n_splits=3)
+    valid_preds = ensemble_valid.predict_proba()
+    valid_pred_labels = np.argmax(valid_preds, axis=1)
+    valid_accuracy = accuracy_score(y_valid, valid_pred_labels)
+    print(f"Validation Accuracy: {valid_accuracy:.4f}")
+    
+    # Generate classification report for test set
+    print("\nClassification Report (Test Set):")
     print(classification_report(y_test, test_pred_labels))
+    
+    # Generate classification report for validation set
+    print("\nClassification Report (Validation Set):")
+    print(classification_report(y_valid, valid_pred_labels))
     
     # Save predictions
     np.save(f"{output_dir}/valid_pred_labels.npy", valid_pred_labels)
     np.save(f"{output_dir}/test_pred_labels.npy", test_pred_labels)
+    
+    # Save validation ensemble
+    ensemble_valid.save(f"{output_dir}/stacking_ensemble_valid")
     
     # ------------------- Compare with Base Models -------------------
     print("\n📊 Comparing ensemble with individual base models...")
