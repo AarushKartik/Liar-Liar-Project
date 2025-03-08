@@ -82,7 +82,7 @@ lgb_model.fit(X_train, y_train, feature_name=feature_names)
 joblib.dump(lgb_model, "lightgbm_model.pkl")
 print("✅ Model trained and saved.")
 
-# ------------------- Feature Importance Analysis -------------------
+# ------------------- Detailed Feature Importance Analysis -------------------
 # Get feature importances from the model
 importance = lgb_model.feature_importances_
 feature_importance = pd.DataFrame({
@@ -90,39 +90,67 @@ feature_importance = pd.DataFrame({
     'Importance': importance
 })
 
+# Add model type to each feature
+feature_importance['Model'] = feature_importance['Feature'].apply(
+    lambda x: 'BERT' if x.startswith('bert') else ('RoBERTa' if x.startswith('roberta') else 'BiLSTM')
+)
+
 # Sort by importance and get top 10 features
 top_features = feature_importance.sort_values(by='Importance', ascending=False).head(10)
 
-# Print top 10 features
+# Print top 10 features with details
 print("\n🔍 Top 10 Most Important Features:")
-for index, row in top_features.iterrows():
-    print(f"{row['Feature']}: {row['Importance']:.6f}")
+print("Rank | Feature | Model | Importance")
+print("-" * 50)
+for i, (index, row) in enumerate(top_features.iterrows(), 1):
+    print(f"{i:2d}   | {row['Feature']:15s} | {row['Model']:7s} | {row['Importance']:.6f}")
 
-# Visualize top 10 features
+# Visualize top 10 features with model color-coding
 plt.figure(figsize=(12, 6))
-sns.barplot(x='Importance', y='Feature', data=top_features)
-plt.title('Top 10 Feature Importance')
+colors = {'BERT': 'blue', 'RoBERTa': 'green', 'BiLSTM': 'red'}
+sns.barplot(
+    x='Importance', 
+    y='Feature', 
+    data=top_features,
+    palette=top_features['Model'].map(colors),
+    hue='Model'
+)
+plt.title('Top 10 Feature Importance by Model Type')
 plt.tight_layout()
 plt.savefig('feature_importance.png')
 print("✅ Feature importance visualization saved to 'feature_importance.png'")
 
-# Analyze which embedding type contributes most to the top features
-embed_types = ['bert', 'roberta', 'bilstm']
-embed_counts = {embed: 0 for embed in embed_types}
-embed_importance = {embed: 0 for embed in embed_types}
+# Calculate total importance contribution by model
+model_importance = top_features.groupby('Model')['Importance'].sum().reset_index()
+model_importance['Percentage'] = (model_importance['Importance'] / model_importance['Importance'].sum()) * 100
+model_feature_count = top_features['Model'].value_counts().reset_index()
+model_feature_count.columns = ['Model', 'Count']
 
-for index, row in top_features.iterrows():
-    feature_name = row['Feature']
-    for embed in embed_types:
-        if feature_name.startswith(embed):
-            embed_counts[embed] += 1
-            embed_importance[embed] += row['Importance']
+# Merge counts and importance
+model_summary = pd.merge(model_importance, model_feature_count, on='Model')
 
-print("\n📊 Embedding Type Analysis in Top 10 Features:")
-for embed in embed_types:
-    print(f"{embed.upper()}: {embed_counts[embed]} features, Total importance: {embed_importance[embed]:.6f}")
+# Print overall model importance in top 10
+print("\n📊 Model Contribution in Top 10 Features:")
+print("Model   | Count | Total Importance | Percentage")
+print("-" * 55)
+for _, row in model_summary.iterrows():
+    print(f"{row['Model']:7s} | {row['Count']:5d} | {row['Importance']:16.6f} | {row['Percentage']:8.2f}%")
 
-# Save top features to file
+# Visualize model contribution as pie chart
+plt.figure(figsize=(10, 6))
+plt.subplot(1, 2, 1)
+plt.pie(model_summary['Count'], labels=model_summary['Model'], autopct='%1.1f%%', colors=[colors[m] for m in model_summary['Model']])
+plt.title('Feature Count Distribution in Top 10')
+
+plt.subplot(1, 2, 2)
+plt.pie(model_summary['Importance'], labels=model_summary['Model'], autopct='%1.1f%%', colors=[colors[m] for m in model_summary['Model']])
+plt.title('Importance Distribution in Top 10')
+
+plt.tight_layout()
+plt.savefig('model_contribution.png')
+print("✅ Model contribution visualization saved to 'model_contribution.png'")
+
+# Save top features to file with detailed info
 top_features.to_csv('top_features.csv', index=False)
 print("✅ Top features saved to 'top_features.csv'")
 
