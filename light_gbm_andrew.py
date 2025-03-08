@@ -72,7 +72,7 @@ class StackingEnsemble:
         self.scalers = []  # Store one scaler per base model
         self.pcas = []     # Store one PCA per base model
     
-    def _get_oof_predictions(self, X, y, n_splits=3):
+    def _get_oof_predictions(self, X, y, n_splits=5):
         """Generate out-of-fold predictions for training the meta-learner"""
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
         oof_preds = []
@@ -149,7 +149,7 @@ class StackingEnsemble:
         test_meta_features = np.hstack(test_meta_features)
         return test_meta_features
     
-    def train(self, X, y, X_test=None, n_splits=3):  # Reduced from 5 to 3 folds
+    def train(self, X, y, X_test=None, n_splits=5):  # Reduced from 5 to 3 folds
         """
         Train the stacking ensemble
         
@@ -261,7 +261,7 @@ class StackingEnsemble:
         return self
 
 # ------------------- Parallelized Grid Search with CV -------------------
-def evaluate_params(param_set, X, y, n_splits=3):
+def evaluate_params(param_set, X, y, n_splits=5):
     """
     Evaluate a parameter set using k-fold cross-validation
     
@@ -325,7 +325,7 @@ def evaluate_params(param_set, X, y, n_splits=3):
         'mean_accuracy': mean_acc,
         'std_accuracy': std_acc
     }
-def grid_search_parallel(param_grid, X, y, n_splits=3, n_jobs=2):  # Reduced from 5 to 3 folds, limited to 2 jobs
+def grid_search_parallel(param_grid, X, y, n_splits=5, n_jobs=2):  # Reduced from 5 to 3 folds, limited to 2 jobs
     """
     Perform grid search with parallelization
     
@@ -569,7 +569,7 @@ if __name__ == "__main__":
     # Now train a separate ensemble for validation predictions
     print("Training ensemble for validation predictions...")
     ensemble_valid = StackingEnsemble(base_models, best_bert_params)
-    ensemble_valid.train(X, y_train, X_valid, n_splits=3)
+    ensemble_valid.train(X, y_train, X_valid, n_splits=5)
     valid_preds = ensemble_valid.predict_proba()
     valid_pred_labels = np.argmax(valid_preds, axis=1)
     valid_accuracy = accuracy_score(y_valid, valid_pred_labels)
