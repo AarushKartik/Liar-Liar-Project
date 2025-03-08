@@ -539,6 +539,80 @@ if __name__ == "__main__":
         BaseLGBMModel(best_roberta_params, "RoBERTa"),
         BaseLGBMModel(best_bilstm_params, "BiLSTM")
     ]
+
+# ------------------- Grid Search for Meta-Learner -------------------
+print("\n🔍 Starting grid search for meta-learner...")
+
+# Generate meta-features for grid search
+def generate_meta_features_for_grid_search(base_models, X, y, X_val, y_val, n_splits=3):
+    """Generate meta-features for tuning the meta-learner"""
+    meta_features = []
+    meta_features_val = []
+    
+    for i, model in enumerate(base_models):
+        print(f"Generating meta-features for {model.feature_name} model...")
+        
+        # Train model on full training data
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X[i])
+        X_val_scaled = scaler.transform(X_val[i])
+        
+        # Apply PCA
+        pca = PCA(n_components=min(100, min(X_scaled.shape[0], X_scaled.shape[1])))
+        X_pca = pca.fit_transform(X_scaled)
+        X_val_pca = pca.transform(X_val_scaled)
+        
+        # Train model
+        model_clone = BaseLGBMModel(model.params, model.feature_name)
+        model_clone.train(X_pca, y)
+        
+        # Get predictions for training and validation
+        train_preds = model_clone.predict_proba(X_pca)
+        val_preds = model_clone.predict_proba(X_val_pca)
+        
+        meta_features.append(train_preds)
+        meta_features_val.append(val_preds)
+    
+    # Combine all predictions
+    meta_features = np.hstack(meta_features)
+    meta_features_val = np.hstack(meta_features_val)
+    
+    return meta_features, meta_features_val
+
+    # Generate meta-features for grid search
+    meta_features_train, meta_features_val = generate_meta_features_for_grid_search(
+        base_models, X, y_train, X_valid, y_valid
+    )
+    print(f"Meta-features train shape: {meta_features_train.shape}")
+    print(f"Meta-features validation shape: {meta_features_val.shape}")
+    
+    # Define a more comprehensive parameter grid for meta-learner
+    meta_learner_param_grid = {
+        'boosting_type': ['gbdt'],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'num_leaves': [15, 31, 50],
+        'max_depth': [3, 5, 7],
+        'min_data_in_leaf': [20, 50, 100],
+        'lambda_l1': [0.0, 0.5, 1.0],
+        'lambda_l2': [0.0, 0.5, 1.0],
+        'feature_fraction': [0.7, 0.8, 0.9],
+        'bagging_fraction': [0.7, 0.8, 0.9],
+        'bagging_freq': [5]
+    }
+    
+    # Run grid search for meta-learner
+    print("Running grid search for meta-learner...")
+    meta_learner_results = grid_search_parallel(
+        meta_learner_param_grid, meta_features_train, y_train, n_splits=3, n_jobs=2
+    )
+    best_meta_learner_params = meta_learner_results[0]['params']
+    print(f"Best meta-learner parameters: {best_meta_learner_params}")
+    print(f"Best meta-learner accuracy: {meta_learner_results[0]['mean_accuracy']:.4f} ± {meta_learner_results[0]['std_accuracy']:.4f}")
+    
+    # Save meta-learner grid search results
+    with open(f"{output_dir}/meta_learner_results.json", "w") as f:
+        json.dump({"meta_learner": meta_learner_results}, f, indent=4, default=str)
+
     
     # ------------------- Create and Train Stacking Ensemble -------------------
     print("\n🚀 Training stacking ensemble...")
