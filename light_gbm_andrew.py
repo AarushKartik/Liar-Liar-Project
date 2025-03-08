@@ -29,20 +29,25 @@ class BaseLGBMModel:
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
         train_data = lgb.Dataset(X_train, label=y_train)
         
-        valid_sets = []
-        valid_names = []
+        valid_sets = [train_data]  # Always include training data as a valid set
+        valid_names = ['train']
 
         if X_valid is not None and y_valid is not None:
             valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
             valid_sets.append(valid_data)
             valid_names.append("valid")
 
+        callbacks = None
+        if X_valid is not None and y_valid is not None:
+            callbacks = [lgb.early_stopping(stopping_rounds=50, verbose=False)]
+
         self.model = lgb.train(
             self.params,
             train_data,
-            valid_sets=valid_sets if valid_sets else None,
-            valid_names=valid_names if valid_names else None,
-            num_boost_round=200  # Reduced from 500 to 200
+            valid_sets=valid_sets,
+            valid_names=valid_names,
+            num_boost_round=200,  # Reduced from 500 to 200
+            callbacks=callbacks
         )
         return self
 
@@ -97,9 +102,9 @@ class StackingEnsemble:
                 X_train_fold = self.pcas[i].fit_transform(X_train_fold)
                 X_val_fold = self.pcas[i].transform(X_val_fold)
                 
-                # Train model
+                # Train model - FIXED: Pass validation data also
                 model_clone = BaseLGBMModel(model.params, model.feature_name)
-                model_clone.train(X_train_fold, y_train_fold)
+                model_clone.train(X_train_fold, y_train_fold, X_val_fold, y_val_fold)
                 
                 # Predict on validation fold
                 oof_pred[val_idx] = model_clone.predict_proba(X_val_fold)
@@ -127,8 +132,9 @@ class StackingEnsemble:
             X_test_pca = self.pcas[i].transform(X_test_scaled)
             
             # Train on full data and predict on test
+            # We don't need early stopping here as we're training on the full dataset
             model_clone = BaseLGBMModel(model.params, model.feature_name)
-            model_clone.train(X_current_pca, y)
+            model_clone.train(X_current_pca, y)  # No validation set needed for final model
             test_preds = model_clone.predict_proba(X_test_pca)
             test_meta_features.append(test_preds)
         
@@ -158,9 +164,19 @@ class StackingEnsemble:
         print("Training meta-model...")
         meta_train_data = lgb.Dataset(meta_features, label=y)
         
+        # Create a validation set for the meta-model (20% of data)
+        X_meta_train, X_meta_val, y_meta_train, y_meta_val = train_test_split(
+            meta_features, y, test_size=0.2, random_state=42, stratify=y
+        )
+        
+        meta_train_data = lgb.Dataset(X_meta_train, label=y_meta_train)
+        meta_val_data = lgb.Dataset(X_meta_val, label=y_meta_val, reference=meta_train_data)
+        
         self.meta_model = lgb.train(
             self.meta_model_params,
             meta_train_data,
+            valid_sets=[meta_train_data, meta_val_data],
+            valid_names=['train', 'valid'],
             num_boost_round=200,  # Reduced from 1000 to 200
             callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]  # Reduced from 100 to 50
         )
