@@ -27,21 +27,27 @@ class BaseLGBMModel:
     
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
         train_data = lgb.Dataset(X_train, label=y_train)
+        
         valid_data = None
+        valid_sets = []
+        valid_names = []
+        
         if X_valid is not None and y_valid is not None:
             valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
-    
-        evals_result = {}  # Define an empty dictionary
-    
+            valid_sets.append(valid_data)
+            valid_names.append("valid")
+        
+        evals_result = {}  # Dictionary to store evaluation metrics
+
         self.model = lgb.train(
             self.params,
             train_data,
-            valid_sets=[valid_data] if valid_data else None,
-            valid_names=['valid'] if valid_data else None,
+            valid_sets=valid_sets if valid_sets else None,
+            valid_names=valid_names if valid_names else None,
             num_boost_round=500,
             callbacks=[
-                lgb.early_stopping(stopping_rounds=50, verbose=False),
-                lgb.record_evaluation(evals_result)  # Correct way to use evals_result
+                lgb.early_stopping(stopping_rounds=50, verbose=False) if valid_sets else None,
+                lgb.record_evaluation(evals_result) if valid_sets else None
             ]
         )
         return self
