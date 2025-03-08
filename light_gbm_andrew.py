@@ -50,7 +50,6 @@ class BaseLGBMModel:
             callbacks=callbacks
         )
         return self
-
     
     def predict_proba(self, X):
         if self.model is None:
@@ -68,12 +67,7 @@ class BaseLGBMModel:
 class StackingEnsemble:
     """Stacking ensemble using LightGBM as meta-learner"""
     
-    def __init__(self, base_models, meta_model_params):
-        self.base_models = base_models
-        self.meta_model_params = meta_model_params
-        self.meta_model = None
-        self.scalers = []  # Store one scaler per base model
-        self.pcas = []     # Store one PCA per base model
+    # ... [other methods remain the same] ...
     
     def _get_oof_predictions(self, X, y, n_splits=3):  # Reduced from 5 to 3 folds
         """Generate out-of-fold predictions for training the meta-learner"""
