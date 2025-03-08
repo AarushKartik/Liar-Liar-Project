@@ -72,7 +72,7 @@ class StackingEnsemble:
         self.scalers = []  # Store one scaler per base model
         self.pcas = []     # Store one PCA per base model
     
-    def _get_oof_predictions(self, X, y, n_splits=3):  # Reduced from 5 to 3 folds
+    def _get_oof_predictions(self, X, y, n_splits=3):
         """Generate out-of-fold predictions for training the meta-learner"""
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
         oof_preds = []
@@ -82,9 +82,10 @@ class StackingEnsemble:
             X_current = X[i]  # Get features for current model
             oof_pred = np.zeros((X_current.shape[0], len(np.unique(y))))
             
-            # Create a scaler and PCA for this model's features
+            # Create a scaler for this model's features
             self.scalers.append(StandardScaler())
-            self.pcas.append(PCA(n_components=100))  # Apply PCA to reduce dimensionality to 100
+            # We'll create PCA for each fold separately to determine appropriate components
+            self.pcas.append(None)  # Placeholder, will be set during fold processing
             
             for fold, (train_idx, val_idx) in enumerate(kf.split(X_current, y)):
                 print(f"Processing fold {fold+1}/{n_splits}")
@@ -95,11 +96,21 @@ class StackingEnsemble:
                 X_train_fold = self.scalers[i].fit_transform(X_train_fold)
                 X_val_fold = self.scalers[i].transform(X_val_fold)
                 
-                # Apply PCA
-                X_train_fold = self.pcas[i].fit_transform(X_train_fold)
-                X_val_fold = self.pcas[i].transform(X_val_fold)
+                # Determine maximum possible components for this fold
+                max_possible_components = min(X_train_fold.shape[0], X_train_fold.shape[1])
+                n_components = min(100, max_possible_components)
+                print(f"Using {n_components} PCA components for fold {fold+1}")
                 
-                # Train model - FIXED: Pass validation data
+                # Create and apply PCA for this fold
+                pca = PCA(n_components=n_components)
+                X_train_fold = pca.fit_transform(X_train_fold)
+                X_val_fold = pca.transform(X_val_fold)
+                
+                # Store the PCA object for the last fold (we'll use it for final predictions)
+                if fold == n_splits - 1:
+                    self.pcas[i] = pca
+                
+                # Train model
                 model_clone = BaseLGBMModel(model.params, model.feature_name)
                 model_clone.train(X_train_fold, y_train_fold, X_val_fold, y_val_fold)
                 
@@ -111,7 +122,7 @@ class StackingEnsemble:
         # Combine all OOF predictions
         meta_features = np.hstack(oof_preds)
         return meta_features
-    
+        
     def _get_test_meta_features(self, X_test):
         """Generate meta-features for test data"""
         test_meta_features = []
