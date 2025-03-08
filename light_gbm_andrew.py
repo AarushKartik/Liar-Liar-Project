@@ -374,9 +374,9 @@ if __name__ == "__main__":
     
     # ------------------- Load Labels -------------------
     print("\n🔍 Loading labels...")
-    y_train = np.loadtxt("feature_vectors/train/train_labels.txt", dtype=int)
-    y_test = np.loadtxt("feature_vectors/test/test_labels.txt", dtype=int)
-    y_valid = np.loadtxt("feature_vectors/valid/valid_labels.txt", dtype=int)
+    y_train = np.loadtxt("/content/drive/MyDrive/feature_vectors/train/train_labels.txt", dtype=int)
+    y_test = np.loadtxt("/content/drive/MyDrive/feature_vectors/test/test_labels.txt", dtype=int)
+    y_valid = np.loadtxt("/content/drive/MyDrive/feature_vectors/valid/valid_labels.txt", dtype=int)
     
     # Print to verify shapes
     print(f"✅ y_train shape: {y_train.shape}")
