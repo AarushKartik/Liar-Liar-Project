@@ -27,37 +27,27 @@ class BaseLGBMModel:
         self.feature_name = feature_name
     
     def train(self, X_train, y_train, X_valid=None, y_valid=None):
-        train_data = lgb.Dataset(X_train, label=y_train)
-        
-        # Set up validation datasets
-        valid_sets = [train_data]
-        valid_names = ['train']
-        
-        if X_valid is not None and y_valid is not None:
-            valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
-            valid_sets.append(valid_data)
-            valid_names.append('valid')
-            
-            # Only use early stopping when validation data is provided
-            self.model = lgb.train(
-                self.params,
-                train_data,
-                valid_sets=valid_sets,
-                valid_names=valid_names,
-                num_boost_round=200,
-                callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]
-            )
-        else:
-            # No early stopping when no validation data
-            self.model = lgb.train(
-                self.params,
-                train_data,
-                num_boost_round=200,
-                valid_sets=valid_sets,
-                valid_names=valid_names
-            )
-        
-        return self
+    train_data = lgb.Dataset(X_train, label=y_train)
+    
+    # Set up validation datasets
+    valid_sets = [train_data]
+    valid_names = ['train']
+    
+    if X_valid is not None and y_valid is not None:
+        valid_data = lgb.Dataset(X_valid, label=y_valid, reference=train_data)
+        valid_sets.append(valid_data)
+        valid_names.append('valid')
+    
+    # Train without early stopping
+    self.model = lgb.train(
+        self.params,
+        train_data,
+        num_boost_round=200,  # Fixed number of boosting rounds
+        valid_sets=valid_sets,
+        valid_names=valid_names
+    )
+    
+    return self
     
     def predict_proba(self, X):
         if self.model is None:
@@ -184,8 +174,7 @@ class StackingEnsemble:
             meta_train_data,
             valid_sets=[meta_train_data, meta_val_data],
             valid_names=['train', 'valid'],
-            num_boost_round=200,  # Reduced from 1000 to 200
-            callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]  # Reduced from 100 to 50
+            num_boost_round=200  # Reduced from 1000 to 200
         )
         
         # Generate test meta-features if provided
@@ -294,8 +283,7 @@ def evaluate_params(param_set, X, y, n_splits=3):  # Reduced from 5 to 3 folds
             param_set,
             train_data,
             valid_sets=[val_data],
-            num_boost_round=200,  # Reduced from 500 to 200
-            callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)]  # Reduced from 50 to 30
+            num_boost_round=200  # Reduced from 500 to 200
         )
         
         # Predict
