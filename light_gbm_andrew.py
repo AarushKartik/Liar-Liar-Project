@@ -623,7 +623,7 @@ def generate_meta_features_for_grid_search(base_models, X, y, X_val, y_val, n_sp
     X_valid = [bert_valid_pca, roberta_valid_pca, bilstm_valid_pca]
     
     # Create ensemble with base models
-    ensemble = StackingEnsemble(base_models, best_bert_params)  # Use bert params as default for meta-learner
+    ensemble = StackingEnsemble(base_models, best_meta_learner_params)
     
     # Train ensemble
     ensemble.train(X, y_train, X_test, n_splits=3)  # Reduced from 5 to 3 folds
@@ -642,7 +642,7 @@ def generate_meta_features_for_grid_search(base_models, X, y, X_val, y_val, n_sp
     
     # Now train a separate ensemble for validation predictions
     print("Training ensemble for validation predictions...")
-    ensemble_valid = StackingEnsemble(base_models, best_bert_params)
+    ensemble_valid = StackingEnsemble(base_models, best_meta_learner_params)
     ensemble_valid.train(X, y_train, X_valid, n_splits=3)
     valid_preds = ensemble_valid.predict_proba()
     valid_pred_labels = np.argmax(valid_preds, axis=1)
