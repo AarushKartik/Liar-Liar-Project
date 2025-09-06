@@ -124,3 +124,116 @@ plt.ylabel('Actual')
 plt.title('Confusion Matrix')
 plt.savefig('confusion_matrix.png')
 print("✅ Confusion matrix saved to 'confusion_matrix.png'")
+
+# Additional analyses with BERT, RoBERTa and BiLSTM individually with LightGBM
+
+os.makedirs("outputs", exist_ok=True)
+
+# ------------------- Load Labels -------------------
+y_train = np.loadtxt("feature_vectors/train/train_labels.txt", dtype=int)
+y_test  = np.loadtxt("feature_vectors/test/test_labels.txt", dtype=int)
+y_valid = np.loadtxt("feature_vectors/valid/valid_labels.txt", dtype=int)
+
+# ------------------- Load Feature Sets -------------------
+# BERT
+bert_train = np.load("/content/drive/MyDrive/feature_vectors/train_bert/bert_train_1_features.npy")
+bert_test  = np.load("/content/drive/MyDrive/feature_vectors/test_bert/bert_test_1_features.npy")
+bert_valid = np.load("/content/drive/MyDrive/feature_vectors/valid_bert/bert_valid_1_features.npy")
+
+# RoBERTa
+roberta_train = np.load("/content/drive/MyDrive/feature_vectors/train_roberta/roberta_train_1_features.npy")
+roberta_test  = np.load("/content/drive/MyDrive/feature_vectors/test_roberta/roberta_test_1_features.npy")
+roberta_valid = np.load("/content/drive/MyDrive/feature_vectors/valid_roberta/roberta_valid_1_features.npy")
+
+# BiLSTM
+bilstm_train = np.load("/content/drive/MyDrive/feature_vectors/train_bilstm/bilstm/bilstm_train_1_features.npy")
+bilstm_test  = np.load("/content/drive/MyDrive/feature_vectors/test_bilstm/bilstm/bilstm_test_1_features.npy")
+bilstm_valid = np.load("/content/drive/MyDrive/feature_vectors/valid_bilstm/bilstm/bilstm_valid_1_features.npy")
+
+# ------------------- Helper: Train/Eval Single-Feature Model -------------------
+def train_eval_single(name, X_train, X_valid, X_test, y_train, y_valid, y_test):
+    print(f"\n==== {name} + LightGBM ====")
+    # Feature names (optional, for LightGBM)
+    feat_dim = X_train.shape[1]
+    feature_names = [f"{name.lower()}_{i}" for i in range(feat_dim)]
+
+    # Scale (kept for consistency with your pipeline)
+    scaler = StandardScaler()
+    X_train_s = scaler.fit_transform(X_train)
+    X_valid_s = scaler.transform(X_valid)
+    X_test_s  = scaler.transform(X_test)
+
+    joblib.dump(scaler, f"outputs/{name.lower()}_scaler.pkl")
+
+    # LightGBM model (same hyperparams as your combined run)
+    lgb_model = lgb.LGBMClassifier(
+        objective='multiclass',
+        num_class=len(np.unique(y_train)),
+        learning_rate=0.05,
+        num_leaves=31,
+        max_depth=5,
+        min_data_in_leaf=50,
+        lambda_l1=0.5,
+        lambda_l2=0.5,
+        feature_fraction=0.9,
+        bagging_fraction=0.9,
+        bagging_freq=5,
+        verbosity=-1
+    )
+
+    print("Training...")
+    lgb_model.fit(X_train_s, y_train, feature_name=feature_names)
+    joblib.dump(lgb_model, f"outputs/{name.lower()}_lightgbm.pkl")
+    print("Model saved.")
+
+    # Evaluate
+    def eval_split(split_name, Xs, ys):
+        yp = lgb_model.predict(Xs)
+        acc = accuracy_score(ys, yp)
+        print(f"{split_name} Accuracy: {acc:.4f}")
+        return yp, acc
+
+    y_train_pred, train_acc = eval_split("Train", X_train_s, y_train)
+    y_valid_pred, valid_acc = eval_split("Valid", X_valid_s, y_valid)
+    y_test_pred,  test_acc  = eval_split("Test",  X_test_s,  y_test)
+
+    # Classification report on test
+    print("\nClassification Report (Test):")
+    print(classification_report(y_test, y_test_pred))
+
+    # Confusion matrix on test
+    cm = confusion_matrix(y_test, y_test_pred)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title(f'{name} + LightGBM — Confusion Matrix (Test)')
+    cm_path = f"outputs/{name.lower()}_confusion_matrix.png"
+    plt.tight_layout()
+    plt.savefig(cm_path)
+    plt.close()
+    print(f"Confusion matrix saved to '{cm_path}'")
+
+    # Save predictions
+    np.save(f"outputs/{name.lower()}_y_pred_train.npy", y_train_pred)
+    np.save(f"outputs/{name.lower()}_y_pred_valid.npy", y_valid_pred)
+    np.save(f"outputs/{name.lower()}_y_pred_test.npy",  y_test_pred)
+
+    return {
+        "name": name,
+        "train_acc": train_acc,
+        "valid_acc": valid_acc,
+        "test_acc":  test_acc
+    }
+
+# ------------------- Run Analysis -------------------
+results = []
+results.append(train_eval_single("BERT",    bert_train,    bert_valid,    bert_test,    y_train, y_valid, y_test))
+results.append(train_eval_single("RoBERTa", roberta_train, roberta_valid, roberta_test, y_train, y_valid, y_test))
+results.append(train_eval_single("BiLSTM",  bilstm_train,  bilstm_valid,  bilstm_test,  y_train, y_valid, y_test))
+
+# ------------------- Print Summary -------------------
+print("\n==== Ablation Summary (Accuracy) ====")
+for r in results:
+    print(f"{r['name']:8s} | Train: {r['train_acc']:.4f}  Valid: {r['valid_acc']:.4f}  Test: {r['test_acc']:.4f}")
+
