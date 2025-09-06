@@ -266,65 +266,6 @@ feature_interpretations = analyze_feature_representation(
     embeddings_dict
 )
 
-# 5. Print and save feature interpretations
-print("\n📊 Feature Interpretations:")
-print("-" * 60)
-
-interpretation_df = pd.DataFrame()
-for interp in feature_interpretations:
-    print(f"Rank {interp['rank']}: {interp['feature_name']} ({interp['model_type']})")
-    print(f"  Most associated with: {class_names[interp['most_associated_class']]}")
-    
-    # Show class correlations
-    print("  Class associations:")
-    for cls_id, corr in sorted(interp['class_correlations'].items(), key=lambda x: x[1], reverse=True):
-        print(f"    - {class_names[cls_id]}: {corr:.4f}")
-    
-    print(f"  Highest activation: {np.mean(interp['top_activation_values']):.4f}")
-    print(f"  Lowest activation: {np.mean(interp['bottom_activation_values']):.4f}")
-    print("-" * 60)
-    
-    # Save to dataframe for export
-    row = {
-        'Rank': interp['rank'],
-        'Feature': interp['feature_name'],
-        'Model': interp['model_type'],
-        'Most_Associated_Class': class_names[interp['most_associated_class']],
-        'Class_Correlation': str(interp['class_correlations']),
-        'Avg_High_Activation': np.mean(interp['top_activation_values']),
-        'Avg_Low_Activation': np.mean(interp['bottom_activation_values']),
-    }
-    interpretation_df = pd.concat([interpretation_df, pd.DataFrame([row])], ignore_index=True)
-
-# Save interpretations to CSV
-interpretation_df.to_csv('feature_interpretations.csv', index=False)
-print("✅ Feature interpretations saved to 'feature_interpretations.csv'")
-
-# 6. Visualize relationship between top features and classes
-plt.figure(figsize=(12, 8))
-for i, interp in enumerate(feature_interpretations):
-    plt.subplot(2, 5, i+1)
-    class_ids = list(interp['class_correlations'].keys())
-    class_correlations = list(interp['class_correlations'].values())
-    
-    # Sort by correlation value
-    sorted_indices = np.argsort(class_correlations)[::-1]
-    sorted_class_ids = [class_ids[i] for i in sorted_indices]
-    sorted_correlations = [class_correlations[i] for i in sorted_indices]
-    
-    # Plot
-    plt.bar(
-        [class_names[cls_id] for cls_id in sorted_class_ids], 
-        sorted_correlations,
-        color=colors[interp['model_type']]
-    )
-    plt.title(f"{interp['feature_name']}")
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-
-plt.savefig('feature_class_associations.png')
-print("✅ Feature-class associations visualization saved to 'feature_class_associations.png'")
-
 # ------------------- Model Evaluation -------------------
 # Load the trained model (optional, since we already have it in memory)
 model = joblib.load("lightgbm_model.pkl")
