@@ -43,39 +43,5 @@ cmake -B build -S .
 cmake --build build -j4
 ```
 
-## Usage
 
-### data_processing.py
-
-'data_processing.py' is the primary script for preparing the Liar-Liar dataset for analysis. It handles data cleaning, preprocessing, and feature extraction. Key components include:
-
-- **Data Cleaning**: Removes duplicates and irrelevant information to ensure data quality.
-- **Data Loading**: Reads the Liar-Liar dataset and formats it for analysis.
-- **Feature Extraction**: Generates features such as sentiment scores and readability metrics to enhance model training.
-
-### model_training.py
-
-`model_training.py` is responsible for training machine learning models on the Liar-Liar dataset to classify political statements based on truthfulness. This script can be used for model training and evaluation.
-
-- **Model Training**: Trains a Long Short-Term Memory (LSTM) model for fake news detection.
-- **Evaluation**: Provides accuracy, precision, recall, and F1-score metrics.
-- **Visualization**: Displays model performance through confusion matrices and classification reports.
-
-## Paper and Presentation Preview
-
-### Paper Preview
-
-You can view a preview of the paper for this project by clicking the link below:
-
-[![PDF Paper Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/paper_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/assets/Aarush_Liar_Liar_Paper.pdf)
-
-This link will open the PDF paper directly in your browser.
-
-### Presentation Preview
-
-You can view a preview of the presentation for this project by clicking the link below:
-
-[![PDF Presentation Preview](https://raw.githubusercontent.com/AarushKartik/Liar-Liar-Project/main/assets/presentation_thumbnail.png)](https://github.com/AarushKartik/Liar-Liar-Project/raw/main/assets/Aarush_Liar_Liar_Presentation.pdf)
-
-This link will open the PDF presentation directly in your browser.
 
